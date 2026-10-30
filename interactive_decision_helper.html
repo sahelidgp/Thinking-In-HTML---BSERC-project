@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DecideWise — Interactive Decision Helper</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            200: '#ddd6fe',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            900: '#4c1d95',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+
+        /* Custom Range Slider Styling */
+        input[type=range].weight-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            outline: none;
+            transition: background 0.2s;
+        }
+
+        input[type=range].weight-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--thumb-color, #6d28d9);
+            cursor: pointer;
+            border: 3px solid #ffffff;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        input[type=range].weight-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            box-shadow: 0 3px 10px rgba(109, 40, 217, 0.4);
+        }
+
+        input[type=range].weight-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--thumb-color, #6d28d9);
+            cursor: pointer;
+            border: 3px solid #ffffff;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+            transition: transform 0.15s ease;
+        }
+
+        /* Compact Matrix Range Sliders */
+        input[type=range].matrix-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 5px;
+            border-radius: 999px;
+            background: #e2e8f0;
+        }
+        input[type=range].matrix-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #4f46e5;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        /* Smooth transitions for rank cards and bars */
+        .rank-card {
+            transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .bar-segment {
+            transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Toast Notification Banner -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Top Navigation & Scenario Bar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                
+                <!-- Brand Title -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-violet-200">
+                        <i data-lucide="scale" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-lg font-extrabold tracking-tight text-slate-900">DecideWise</h1>
+                            <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Live Ranker</span>
+                        </div>
+                        <p class="text-xs text-slate-500">Compare options with priority sliders that re-rank results in real time</p>
+                    </div>
+                </div>
+
+                <!-- Scenario Preset Switcher -->
+                <div class="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200/80" id="presetButtons">
+                    <button onclick="loadPreset('laptop')" id="preset-laptop" class="preset-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">
+                        <i data-lucide="laptop" class="w-3.5 h-3.5"></i>
+                        <span>Choosing a Laptop</span>
+                    </button>
+                    <button onclick="loadPreset('vacation')" id="preset-vacation" class="preset-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">
+                        <i data-lucide="plane" class="w-3.5 h-3.5"></i>
+                        <span>Next Vacation Spot</span>
+                    </button>
+                    <button onclick="loadPreset('job')" id="preset-job" class="preset-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">
+                        <i data-lucide="briefcase" class="w-3.5 h-3.5"></i>
+                        <span>Job Offer</span>
+                    </button>
+                    <button onclick="loadPreset('custom')" id="preset-custom" class="preset-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">
+                        <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+                        <span>Custom Decision</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Scenario Header & Winner Summary Banner -->
+        <section class="bg-gradient-to-r from-slate-900 via-indigo-950 to-violet-950 rounded-2xl p-5 sm:p-6 text-white shadow-lg relative overflow-hidden">
+            <div class="absolute -right-12 -top-12 w-56 h-56 rounded-full bg-violet-500/10 blur-2xl pointer-events-none"></div>
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+                <div class="space-y-1.5 max-w-xl">
+                    <div class="flex items-center gap-2 text-violet-300 text-xs font-semibold uppercase tracking-wider">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                        <span id="scenarioSubtitle">Active Decision Scenario</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input id="scenarioTitleInput" type="text" value="Choosing a Laptop" 
+                            onchange="updateScenarioTitle(this.value)"
+                            class="bg-transparent border-b border-transparent hover:border-slate-600 focus:border-violet-400 focus:outline-none text-2xl sm:text-3xl font-extrabold tracking-tight text-white w-full transition-colors"
+                            title="Click to rename scenario" />
+                        <i data-lucide="pencil" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                    </div>
+                    <p id="scenarioDesc" class="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                        Drag the importance sliders on the left to see which option rises to #1 based on your personal priorities.
+                    </p>
+                </div>
+
+                <!-- Live Top Recommendation Pill -->
+                <div class="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-4 flex items-center gap-4 min-w-[260px] sm:min-w-[320px]">
+                    <div class="w-12 h-12 rounded-xl bg-amber-400/20 border border-amber-300/40 flex items-center justify-center text-2xl shrink-0" id="topWinnerEmoji">
+                        🏆
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-amber-300">#1 Top Match</span>
+                            <span id="topWinnerMargin" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-medium">+4.2% lead</span>
+                        </div>
+                        <div id="topWinnerName" class="text-lg font-bold text-white truncate">MacBook Air M3</div>
+                        <div class="text-xs text-slate-300 flex items-center gap-2 mt-0.5">
+                            <span>Weighted Match: <strong id="topWinnerScore" class="text-white">86.4%</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Primary Interactive Grid: Left (Sliders) + Right (Live Ranking & Visuals) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- LEFT COLUMN: Priority Weight Sliders (5 cols) -->
+            <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-5">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3.5">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <i data-lucide="SlidersHorizontal" class="w-4 h-4 text-violet-600"></i>
+                            <span>1. Priority Weights</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">How much does each criterion matter to you? (0–10)</p>
+                    </div>
+                    <!-- Quick Actions -->
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="equalizeWeights()" title="Set all sliders to 5" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-1">
+                            <i data-lucide="equal" class="w-3.5 h-3.5"></i>
+                            <span>Equalize</span>
+                        </button>
+                        <button onclick="resetScenario()" title="Reset scenario to default" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-1">
+                            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                            <span>Reset</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dynamic Sliders List -->
+                <div id="criteriaSlidersList" class="space-y-4">
+                    <!-- Populated via JS -->
+                </div>
+
+                <!-- Add New Criterion Form -->
+                <div class="pt-3 border-t border-slate-100">
+                    <div class="flex items-center gap-2">
+                        <input id="newCriterionInput" type="text" placeholder="Add custom criterion (e.g. Warranty)..." 
+                            onkeydown="if(event.key==='Enter') addCriterion()"
+                            class="flex-1 text-xs px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100" />
+                        <button onclick="addCriterion()" class="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold transition flex items-center gap-1.5 shrink-0 shadow-sm">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>Add Criterion</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Weight Distribution Mini Bar -->
+                <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-200/60 space-y-2">
+                    <div class="flex items-center justify-between text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                        <span>Relative Weight Share</span>
+                        <span id="totalWeightPoints">Total: 35 pts</span>
+                    </div>
+                    <div id="weightShareBar" class="h-2.5 w-full rounded-full overflow-hidden flex bg-slate-200">
+                        <!-- Segments populated by JS -->
+                    </div>
+                    <div id="weightShareLegend" class="flex flex-wrap gap-x-3 gap-y-1 pt-1">
+                        <!-- Legend items populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Live Ranked Leaderboard & Visual Charts (7 cols) -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- Live Leaderboard Section -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3.5">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                                <i data-lucide="trophy" class="w-4 h-4 text-amber-500"></i>
+                                <span>2. Live Ranked Leaderboard</span>
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Options re-order immediately as you drag priority sliders</p>
+                        </div>
+
+                        <!-- Add New Option Inline Input -->
+                        <div class="flex items-center gap-1.5">
+                            <input id="newOptionInput" type="text" placeholder="New option name..." 
+                                onkeydown="if(event.key==='Enter') addOption()"
+                                class="text-xs px-3 py-1.5 rounded-xl border border-slate-200 focus:outline-none focus:border-violet-500 w-36 sm:w-44" />
+                            <button onclick="addOption()" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition flex items-center gap-1 shrink-0">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                <span>Add Option</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Ranked Cards Container -->
+                    <div id="leaderboardContainer" class="space-y-3">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Interactive Visual Analytics Card (Stacked Breakdown & Radar Spider Chart) -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                                <i data-lucide="bar-chart-3" class="w-4 h-4 text-indigo-600"></i>
+                                <span>3. Visual Score Breakdown</span>
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">See how each criterion contributes to every option's score</p>
+                        </div>
+
+                        <!-- Visualization Mode Switcher -->
+                        <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200/80">
+                            <button onclick="setChartMode('stacked')" id="tab-stacked" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 bg-white text-slate-900 shadow-sm">
+                                <i data-lucide="layers" class="w-3.5 h-3.5 text-violet-600"></i>
+                                <span>Stacked Contribution</span>
+                            </button>
+                            <button onclick="setChartMode('radar')" id="tab-radar" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-slate-600 hover:text-slate-900">
+                                <i data-lucide="hexagon" class="w-3.5 h-3.5 text-indigo-600"></i>
+                                <span>Radar / Spider Chart</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- View 1: Stacked Horizontal Contribution Chart -->
+                    <div id="stackedChartView" class="space-y-4 pt-1">
+                        <!-- Populated via JS -->
+                    </div>
+
+                    <!-- View 2: SVG Radar / Spider Chart -->
+                    <div id="radarChartView" class="hidden pt-2">
+                        <div class="flex flex-col md:flex-row items-center justify-center gap-6">
+                            <div class="w-full max-w-[360px] aspect-square flex items-center justify-center">
+                                <svg id="radarSvg" viewBox="0 0 380 380" class="w-full h-full overflow-visible"></svg>
+                            </div>
+                            <div class="w-full md:w-52 space-y-3">
+                                <div class="text-xs font-bold uppercase tracking-wider text-slate-400">Options Legend</div>
+                                <div id="radarLegend" class="space-y-2"></div>
+                                <p class="text-[11px] text-slate-400 leading-relaxed pt-2 border-t border-slate-100">
+                                    Outer vertices show raw rating (1–10) on each axis. Hover over an option in the legend to highlight its profile polygon.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- BOTTOM SECTION: Interactive Option Ratings Matrix (1-10 Editor) -->
+        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/60">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                        <i data-lucide="table-2" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">4. Option Ratings Matrix (1–10)</h2>
+                        <p class="text-xs text-slate-500">Fine-tune how well each option performs on each criterion — rankings update live</p>
+                    </div>
+                </div>
+
+                <button onclick="toggleMatrixCollapse()" id="matrixToggleBtn" class="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition shadow-sm">
+                    <span id="matrixToggleText">Hide Matrix</span>
+                    <i data-lucide="chevron-up" id="matrixToggleIcon" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div id="matrixBody" class="p-5 overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[640px]">
+                    <thead>
+                        <tr id="matrixHeaderRow" class="border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                            <!-- Populated by JS -->
+                        </tr>
+                    </thead>
+                    <tbody id="matrixTableBody" class="divide-y divide-slate-100 text-sm">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-xs text-slate-400 border-t border-slate-200/60 mt-8">
+        DecideWise Interactive Decision Helper • Adjust weights, edit ratings, and compare trade-offs visually in real time.
+    </footer>
+
+    <!-- Application Logic -->
+    <script>
+        // Distinct Accessible Color Palette for Criteria & Options
+        const CRITERION_COLORS = [
+            '#7c3aed', // Violet
+            '#0ea5e9', // Sky Blue
+            '#10b981', // Emerald
+            '#f59e0b', // Amber
+            '#ec4899', // Pink
+            '#6366f1', // Indigo
+            '#14b8a6', // Teal
+            '#f43f5e'  // Rose
+        ];
+
+        const OPTION_COLORS = [
+            '#7c3aed', // Violet
+            '#0284c7', // Sky
+            '#059669', // Emerald
+            '#d97706', // Amber
+            '#e11d48', // Rose
+            '#4f46e5', // Indigo
+        ];
+
+        // Preset Scenarios Data Store
+        const PRESET_SCENARIOS = {
+            laptop: {
+                title: "Choosing a Laptop",
+                subtitle: "Tech Purchase Decision",
+                description: "Balance raw CPU/GPU performance against portability, battery endurance, and value for money.",
+                criteria: [
+                    { id: 'c1', name: 'Performance', weight: 8, icon: 'cpu' },
+                    { id: 'c2', name: 'Battery Life', weight: 9, icon: 'battery-charging' },
+                    { id: 'c3', name: 'Portability', weight: 7, icon: 'feather' },
+                    { id: 'c4', name: 'Price / Value', weight: 8, icon: 'tag' },
+                    { id: 'c5', name: 'Display Quality', weight: 6, icon: 'monitor' }
+                ],
+                options: [
+                    {
+                        id: 'o1',
+                        name: 'MacBook Air M3',
+                        emoji: '💻',
+                        note: 'Silent fanless design & all-day battery',
+                        scores: { c1: 8, c2: 10, c3: 10, c4: 9, c5: 8 }
+                    },
+                    {
+                        id: 'o2',
+                        name: 'ASUS ROG Zephyrus G14',
+                        emoji: '🎮',
+                        note: 'OLED 120Hz powerhouse for creators & gaming',
+                        scores: { c1: 10, c2: 7, c3: 8, c4: 8, c5: 10 }
+                    },
+                    {
+                        id: 'o3',
+                        name: 'ThinkPad X1 Carbon',
+                        emoji: '💼',
+                        note: 'Ultralight enterprise keyboard & durability',
+                        scores: { c1: 7, c2: 8, c3: 10, c4: 6, c5: 8 }
+                    },
+                    {
+                        id: 'o4',
+                        name: 'Dell XPS 14',
+                        emoji: '✨',
+                        note: 'Futuristic edge-to-edge display & build',
+                        scores: { c1: 8, c2: 7, c3: 8, c4: 6, c5: 9 }
+                    }
+                ]
+            },
+            vacation: {
+                title: "Next Vacation Spot",
+                subtitle: "Travel & Leisure Planner",
+                description: "Compare destinations based on budget friendliness, culinary culture, relaxation, and outdoor adventure.",
+                criteria: [
+                    { id: 'c1', name: 'Budget Friendly', weight: 7, icon: 'wallet' },
+                    { id: 'c2', name: 'Food & Culture', weight: 9, icon: 'utensils' },
+                    { id: 'c3', name: 'Relaxation & Vibe', weight: 8, icon: 'palmtree' },
+                    { id: 'c4', name: 'Adventure & Sights', weight: 7, icon: 'compass' }
+                ],
+                options: [
+                    {
+                        id: 'o1',
+                        name: 'Kyoto, Japan',
+                        emoji: '⛩️',
+                        note: 'Unmatched temples, cuisine & seasonal beauty',
+                        scores: { c1: 6, c2: 10, c3: 8, c4: 8 }
+                    },
+                    {
+                        id: 'o2',
+                        name: 'Bali, Indonesia',
+                        emoji: '🌴',
+                        note: 'Tropical villas, surf beaches & great value',
+                        scores: { c1: 10, c2: 8, c3: 10, c4: 8 }
+                    },
+                    {
+                        id: 'o3',
+                        name: 'Lisbon, Portugal',
+                        emoji: '🚋',
+                        note: 'Sunny coastal charm, pastries & walkable hills',
+                        scores: { c1: 8, c2: 9, c3: 8, c4: 7 }
+                    },
+                    {
+                        id: 'o4',
+                        name: 'Reykjavik, Iceland',
+                        emoji: '🌋',
+                        note: 'Dramatic glaciers, waterfalls & hot springs',
+                        scores: { c1: 4, c2: 7, c3: 7, c4: 10 }
+                    }
+                ]
+            },
+            job: {
+                title: "Selecting a Job Offer",
+                subtitle: "Career Path Evaluation",
+                description: "Weigh compensation against work-life harmony, long-term career trajectory, and remote flexibility.",
+                criteria: [
+                    { id: 'c1', name: 'Base Compensation', weight: 9, icon: 'dollar-sign' },
+                    { id: 'c2', name: 'Work-Life Balance', weight: 8, icon: 'heart-handshake' },
+                    { id: 'c3', name: 'Career Growth', weight: 9, icon: 'trending-up' },
+                    { id: 'c4', name: 'Remote Flexibility', weight: 7, icon: 'home' }
+                ],
+                options: [
+                    {
+                        id: 'o1',
+                        name: 'Tech Giant Corp',
+                        emoji: '🏢',
+                        note: 'Top-tier pay & resume prestige, hybrid policy',
+                        scores: { c1: 10, c2: 7, c3: 8, c4: 6 }
+                    },
+                    {
+                        id: 'o2',
+                        name: 'Series B Startup',
+                        emoji: '🚀',
+                        note: 'Fast ownership, high equity upside, intense pace',
+                        scores: { c1: 8, c2: 5, c3: 10, c4: 8 }
+                    },
+                    {
+                        id: 'o3',
+                        name: 'FinTech Mid-Size',
+                        emoji: '📈',
+                        note: 'Balanced culture, solid benefits & modern stack',
+                        scores: { c1: 8, c2: 8, c3: 8, c4: 8 }
+                    },
+                    {
+                        id: 'o4',
+                        name: 'Remote Digital Agency',
+                        emoji: '🌍',
+                        note: '100% work-from-anywhere & 4-day summer weeks',
+                        scores: { c1: 6, c2: 10, c3: 6, c4: 10 }
+                    }
+                ]
+            },
+            custom: {
+                title: "My Custom Decision",
+                subtitle: "Custom Comparison Matrix",
+                description: "Rename criteria, adjust weights, or add your own options below to build a custom decision model.",
+                criteria: [
+                    { id: 'c1', name: 'Cost / Affordability', weight: 8, icon: 'circle-dollar-sign' },
+                    { id: 'c2', name: 'Quality & Reliability', weight: 9, icon: 'shield-check' },
+                    { id: 'c3', name: 'Ease of Use', weight: 7, icon: 'smile' },
+                    { id: 'c4', name: 'Long-Term Value', weight: 8, icon: 'sparkles' }
+                ],
+                options: [
+                    {
+                        id: 'o1',
+                        name: 'Option Alpha',
+                        emoji: '🅰️',
+                        note: 'Balanced all-rounder choice',
+                        scores: { c1: 8, c2: 8, c3: 9, c4: 8 }
+                    },
+                    {
+                        id: 'o2',
+                        name: 'Option Beta',
+                        emoji: '🅱️',
+                        note: 'Premium high-output contender',
+                        scores: { c1: 6, c2: 10, c3: 7, c4: 9 }
+                    },
+                    {
+                        id: 'o3',
+                        name: 'Option Gamma',
+                        emoji: '🌀',
+                        note: 'Budget-conscious starter pick',
+                        scores: { c1: 10, c2: 6, c3: 8, c4: 6 }
+                    }
+                ]
+            }
+        };
+
+        // Active Application State
+        let currentPresetKey = 'laptop';
+        let state = null;
+        let chartMode = 'stacked'; // 'stacked' | 'radar'
+        let highlightedOptionId = null;
+        let matrixCollapsed = false;
+
+        // Deep clone helper
+        function cloneData(obj) {
+            return JSON.parse(JSON.stringify(obj));
+        }
+
+        // Toast Helper (replaces alert)
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bgClass = type === 'warn' ? 'bg-rose-600' : 'bg-slate-900';
+            toast.className = `${bgClass} text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition-all duration-300 opacity-0 translate-y-2`;
+            toast.innerHTML = `<span>${message}</span>`;
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('opacity-0', 'translate-y-2');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 2600);
+        }
+
+        // Load a preset scenario
+        function loadPreset(presetKey) {
+            currentPresetKey = presetKey;
+            state = cloneData(PRESET_SCENARIOS[presetKey]);
+
+            // Update active button styling
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.className = 'preset-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900 hover:bg-white/60';
+            });
+            const activeBtn = document.getElementById(`preset-${presetKey}`);
+            if (activeBtn) {
+                activeBtn.className = 'preset-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-white text-violet-700 shadow-sm ring-1 ring-slate-200';
+            }
+
+            // Update Header Info
+            document.getElementById('scenarioTitleInput').value = state.title;
+            document.getElementById('scenarioSubtitle').textContent = state.subtitle;
+            document.getElementById('scenarioDesc').textContent = state.description;
+
+            renderAll();
+        }
+
+        // Update scenario title
+        function updateScenarioTitle(val) {
+            if (val.trim()) {
+                state.title = val.trim();
+                showToast('Scenario title updated');
+            }
+        }
+
+        // Calculate Weighted Scores & Ranked Options
+        function computeRankings() {
+            const totalWeight = state.criteria.reduce((sum, c) => sum + Number(c.weight), 0);
+
+            const results = state.options.map((opt, idx) => {
+                let weightedSum = 0;
+                const breakdown = state.criteria.map((c, cIdx) => {
+                    const rawScore = Number(opt.scores[c.id] ?? 5);
+                    const weight = Number(c.weight);
+                    // Contribution in percentage points (0 to 100 scale)
+                    const normalizedWeight = totalWeight > 0 ? (weight / totalWeight) : (1 / state.criteria.length);
+                    const contributionPct = (rawScore / 10) * normalizedWeight * 100;
+                    weightedSum += rawScore * weight;
+                    return {
+                        criterionId: c.id,
+                        name: c.name,
+                        rawScore,
+                        weight,
+                        contributionPct,
+                        color: CRITERION_COLORS[cIdx % CRITERION_COLORS.length]
+                    };
+                });
+
+                const maxPossible = totalWeight * 10;
+                const matchPercentage = maxPossible > 0 ? (weightedSum / maxPossible) * 100 : 0;
+
+                return {
+                    ...opt,
+                    color: OPTION_COLORS[idx % OPTION_COLORS.length],
+                    weightedSum,
+                    matchPercentage,
+                    breakdown
+                };
+            });
+
+            // Sort descending by matchPercentage
+            results.sort((a, b) => b.matchPercentage - a.matchPercentage);
+            return { results, totalWeight };
+        }
+
+        // Render Criteria Sliders (Left Panel)
+        function renderCriteriaSliders() {
+            const container = document.getElementById('criteriaSlidersList');
+            container.innerHTML = '';
+
+            state.criteria.forEach((criterion, idx) => {
+                const color = CRITERION_COLORS[idx % CRITERION_COLORS.length];
+                const weightVal = Number(criterion.weight);
+
+                // Priority label badge
+                let priorityText = 'Medium';
+                if (weightVal === 0) priorityText = 'Ignored';
+                else if (weightVal <= 3) priorityText = 'Low';
+                else if (weightVal >= 8) priorityText = 'Critical';
+                else if (weightVal >= 6) priorityText = 'High';
+
+                const item = document.createElement('div');
+                item.className = 'p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80 hover:border-slate-300 transition space-y-2';
+                item.innerHTML = `
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                            <span class="w-3 h-3 rounded-full shrink-0" style="background-color: ${color}"></span>
+                            <input type="text" value="${criterion.name}" 
+                                onchange="renameCriterion('${criterion.id}', this.value)"
+                                class="font-semibold text-sm text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-violet-500 focus:outline-none truncate w-full"
+                                title="Click to rename criterion" />
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span id="badge-${criterion.id}" class="text-[11px] font-medium px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600">
+                                ${priorityText}
+                            </span>
+                            <span id="weight-val-${criterion.id}" class="text-sm font-extrabold w-7 text-right" style="color: ${color}">
+                                ${weightVal}
+                            </span>
+                            <button onclick="removeCriterion('${criterion.id}')" title="Remove criterion"
+                                class="text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition">
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-[10px] font-semibold text-slate-400">0</span>
+                        <input type="range" min="0" max="10" step="1" value="${weightVal}"
+                            style="--thumb-color: ${color}"
+                            oninput="handleWeightSlide('${criterion.id}', this.value)"
+                            class="weight-slider flex-1" />
+                        <span class="text-[10px] font-semibold text-slate-400">10</span>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+
+            lucide.createIcons();
+        }
+
+        // Live Slider Input Handler (Fast update without destroying slider DOM focus)
+        function handleWeightSlide(criterionId, newValue) {
+            const target = state.criteria.find(c => c.id === criterionId);
+            if (!target) return;
+            target.weight = Number(newValue);
+
+            // Update number & priority badge inline
+            const valSpan = document.getElementById(`weight-val-${criterionId}`);
+            if (valSpan) valSpan.textContent = target.weight;
+
+            const badgeSpan = document.getElementById(`badge-${criterionId}`);
+            if (badgeSpan) {
+                let priorityText = 'Medium';
+                if (target.weight === 0) priorityText = 'Ignored';
+                else if (target.weight <= 3) priorityText = 'Low';
+                else if (target.weight >= 8) priorityText = 'Critical';
+                else if (target.weight >= 6) priorityText = 'High';
+                badgeSpan.textContent = priorityText;
+            }
+
+            // Re-render live outputs immediately
+            updateDynamicVisuals();
+        }
+
+        // Update Weight Distribution Bar, Leaderboard, Charts, and Top Banner
+        function updateDynamicVisuals() {
+            const { results, totalWeight } = computeRankings();
+
+            // 1. Update Top Winner Banner
+            if (results.length > 0) {
+                const winner = results[0];
+                const runnerUp = results[1];
+                document.getElementById('topWinnerEmoji').textContent = winner.emoji || '🏆';
+                document.getElementById('topWinnerName').textContent = winner.name;
+                document.getElementById('topWinnerScore').textContent = `${winner.matchPercentage.toFixed(1)}%`;
+
+                const marginEl = document.getElementById('topWinnerMargin');
+                if (runnerUp) {
+                    const diff = (winner.matchPercentage - runnerUp.matchPercentage).toFixed(1);
+                    marginEl.textContent = diff > 0 ? `+${diff}% lead` : 'Tied for #1';
+                } else {
+                    marginEl.textContent = 'Top Pick';
+                }
+            }
+
+            // 2. Update Weight Share Bar
+            document.getElementById('totalWeightPoints').textContent = `Total: ${totalWeight} pts`;
+            const shareBar = document.getElementById('weightShareBar');
+            const shareLegend = document.getElementById('weightShareLegend');
+            shareBar.innerHTML = '';
+            shareLegend.innerHTML = '';
+
+            state.criteria.forEach((c, idx) => {
+                const color = CRITERION_COLORS[idx % CRITERION_COLORS.length];
+                const pct = totalWeight > 0 ? (c.weight / totalWeight) * 100 : (100 / state.criteria.length);
+
+                const seg = document.createElement('div');
+                seg.className = 'bar-segment h-full';
+                seg.style.width = `${pct}%`;
+                seg.style.backgroundColor = color;
+                seg.title = `${c.name}: ${pct.toFixed(0)}%`;
+                shareBar.appendChild(seg);
+
+                const leg = document.createElement('div');
+                leg.className = 'flex items-center gap-1 text-[11px] text-slate-600';
+                leg.innerHTML = `<span class="w-2 h-2 rounded-full" style="background:${color}"></span><span>${c.name} (${ Math.round(pct)}%)</span>`;
+                shareLegend.appendChild(leg);
+            });
+
+            // 3. Render Ranked Leaderboard Cards
+            renderLeaderboard(results);
+
+            // 4. Render Active Visual Chart (Stacked & Radar)
+            renderStackedChart(results);
+            renderRadarChart(results);
+
+            // 5. Update Total Column in Matrix
+            results.forEach((opt, rankIdx) => {
+                const scoreCell = document.getElementById(`matrix-total-${opt.id}`);
+                if (scoreCell) {
+                    scoreCell.textContent = `${opt.matchPercentage.toFixed(1)}% (#${rankIdx + 1})`;
+                }
+            });
+        }
+
+        // Render Live Ranked Leaderboard Cards
+        function renderLeaderboard(results) {
+            const container = document.getElementById('leaderboardContainer');
+            container.innerHTML = '';
+
+            results.forEach((opt, index) => {
+                const rank = index + 1;
+                const isWinner = rank === 1;
+
+                // Medal styling
+                let rankBadgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
+                let rankLabel = `#${rank}`;
+                if (rank === 1) {
+                    rankBadgeClass = 'bg-amber-100 text-amber-800 border-amber-300';
+                    rankLabel = '🥇 1st';
+                } else if (rank === 2) {
+                    rankBadgeClass = 'bg-slate-200/80 text-slate-800 border-slate-300';
+                    rankLabel = '🥈 2nd';
+                } else if (rank === 3) {
+                    rankBadgeClass = 'bg-orange-100 text-orange-800 border-orange-200';
+                    rankLabel = '🥉 3rd';
+                }
+
+                // Sort top 3 contributing criteria for quick insight pills
+                const topContributors = [...opt.breakdown]
+                    .sort((a, b) => b.contributionPct - a.contributionPct)
+                    .slice(0, 3);
+
+                const card = document.createElement('div');
+                card.className = `rank-card rounded-xl p-4 border ${
+                    isWinner 
+                        ? 'bg-gradient-to-r from-violet-50/70 via-white to-indigo-50/50 border-violet-300 shadow-sm ring-1 ring-violet-200/60' 
+                        : 'bg-white border-slate-200 hover:border-slate-300'
+                }`;
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <span class="px-2.5 py-1 rounded-lg text-xs font-extrabold border shrink-0 ${rankBadgeClass}">
+                                ${rankLabel}
+                            </span>
+                            <span class="text-xl shrink-0">${opt.emoji || '📌'}</span>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <input type="text" value="${opt.name}" 
+                                        onchange="renameOption('${opt.id}', this.value)"
+                                        class="font-bold text-slate-900 text-sm sm:text-base bg-transparent border-b border-transparent hover:border-slate-300 focus:border-violet-500 focus:outline-none truncate"
+                                        title="Click to rename option" />
+                                </div>
+                                <p class="text-xs text-slate-500 truncate">${opt.note || 'Custom option candidate'}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 shrink-0">
+                            <div class="text-right">
+                                <div class="text-lg sm:text-xl font-extrabold ${isWinner ? 'text-violet-700' : 'text-slate-900'}">
+                                    ${opt.matchPercentage.toFixed(1)}%
+                                </div>
+                                <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Match Score</div>
+                            </div>
+                            <button onclick="removeOption('${opt.id}')" title="Remove option"
+                                class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Segmented Progress Bar -->
+                    <div class="mt-3 h-2.5 w-full bg-slate-100 rounded-full overflow-hidden flex p-0.5 gap-0.5 border border-slate-200/60">
+                        ${opt.breakdown.map(b => `
+                            <div class="bar-segment h-full first:rounded-l-full last:rounded-r-full"
+                                style="width: ${b.contributionPct}%; background-color: ${b.color}"
+                                title="${b.name}: +${b.contributionPct.toFixed(1)}% (Rating ${b.rawScore}/10 × Weight ${b.weight})">
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <!-- Top Criterion Drivers -->
+                    <div class="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="text-[11px] text-slate-400 font-medium">Top drivers:</span>
+                            ${topContributors.map(b => `
+                                <span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                                    <span class="w-1.5 h-1.5 rounded-full" style="background:${b.color}"></span>
+                                    ${b.name}: <strong>${b.rawScore}/10</strong>
+                                </span>
+                            `).join('')}
+                        </div>
+                        <span class="text-[11px] font-medium text-slate-400">${opt.weightedSum} raw pts</span>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        // Render Stacked Horizontal Bar Chart Breakdown
+        function renderStackedChart(results) {
+            const container = document.getElementById('stackedChartView');
+            container.innerHTML = '';
+
+            // Legend header
+            const legend = document.createElement('div');
+            legend.className = 'flex flex-wrap items-center gap-3 pb-2 border-b border-slate-100';
+            state.criteria.forEach((c, idx) => {
+                const color = CRITERION_COLORS[idx % CRITERION_COLORS.length];
+                const item = document.createElement('div');
+                item.className = 'flex items-center gap-1.5 text-xs font-medium text-slate-600';
+                item.innerHTML = `<span class="w-2.5 h-2.5 rounded-sm" style="background:${color}"></span><span>${c.name}</span>`;
+                legend.appendChild(item);
+            });
+            container.appendChild(legend);
+
+            // Bars for each option
+            results.forEach((opt, idx) => {
+                const row = document.createElement('div');
+                row.className = 'space-y-1.5';
+                row.innerHTML = `
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-bold text-slate-800">${idx + 1}. ${opt.emoji || ''} ${opt.name}</span>
+                        <span class="font-extrabold text-slate-900">${opt.matchPercentage.toFixed(1)}% total</span>
+                    </div>
+                    <div class="h-7 w-full bg-slate-100 rounded-xl overflow-hidden flex border border-slate-200/70 p-0.5 gap-0.5">
+                        ${opt.breakdown.map(b => {
+                            const showLabel = b.contributionPct >= 9;
+                            return `
+                                <div class="bar-segment h-full flex items-center justify-center text-[10px] font-bold text-white overflow-hidden first:rounded-l-lg last:rounded-r-lg"
+                                    style="width: ${b.contributionPct}%; background-color: ${b.color}"
+                                    title="${b.name}: ${b.contributionPct.toFixed(1)}% contribution">
+                                    ${showLabel ? `${b.contributionPct.toFixed(0)}%` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        // Render SVG Radar / Spider Chart
+        function renderRadarChart(results) {
+            const svg = document.getElementById('radarSvg');
+            const legend = document.getElementById('radarLegend');
+            if (!svg || !legend) return;
+
+            svg.innerHTML = '';
+            legend.innerHTML = '';
+
+            const criteriaCount = state.criteria.length;
+            if (criteriaCount < 3) {
+                svg.innerHTML = `<text x="190" y="190" text-anchor="middle" class="text-xs fill-slate-400">Add at least 3 criteria to display Radar Chart</text>`;
+                return;
+            }
+
+            const cx = 190;
+            const cy = 190;
+            const maxRadius = 125;
+            const levels = [2, 4, 6, 8, 10];
+
+            // Helper to convert (axisIndex, value 0..10) to (x,y)
+            function getPoint(axisIdx, val) {
+                const angle = (Math.PI * 2 * axisIdx) / criteriaCount - Math.PI / 2;
+                const r = (val / 10) * maxRadius;
+                return {
+                    x: cx + r * Math.cos(angle),
+                    y: cy + r * Math.sin(angle)
+                };
+            }
+
+            // 1. Draw concentric polygon grid levels
+            levels.forEach(level => {
+                const pts = state.criteria.map((_, i) => {
+                    const p = getPoint(i, level);
+                    return `${p.x},${p.y}`;
+                }).join(' ');
+
+                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                poly.setAttribute('points', pts);
+                poly.setAttribute('fill', level === 10 ? '#f8fafc' : 'none');
+                poly.setAttribute('stroke', '#e2e8f0');
+                poly.setAttribute('stroke-width', '1');
+                svg.appendChild(poly);
+            });
+
+            // 2. Draw axis lines & labels
+            state.criteria.forEach((c, i) => {
+                const endPt = getPoint(i, 10);
+                const labelPt = getPoint(i, 12.2);
+
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', cx);
+                line.setAttribute('y1', cy);
+                line.setAttribute('x2', endPt.x);
+                line.setAttribute('y2', endPt.y);
+                line.setAttribute('stroke', '#cbd5e1');
+                line.setAttribute('stroke-width', '1');
+                line.setAttribute('stroke-dasharray', '3,3');
+                svg.appendChild(line);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', labelPt.x);
+                text.setAttribute('y', labelPt.y);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'middle');
+                text.setAttribute('fill', '#334155');
+                text.setAttribute('font-size', '11');
+                text.setAttribute('font-weight', '600');
+                text.textContent = `${c.name} (w:${c.weight})`;
+                svg.appendChild(text);
+            });
+
+            // 3. Draw Option Polygons
+            results.forEach((opt, idx) => {
+                const isHighlighted = highlightedOptionId === null || highlightedOptionId === opt.id;
+                const fillOpacity = highlightedOptionId === opt.id ? '0.32' : (highlightedOptionId === null ? '0.14' : '0.04');
+                const strokeOpacity = isHighlighted ? '1' : '0.2';
+
+                const pts = state.criteria.map((c, i) => {
+                    const score = Number(opt.scores[c.id] ?? 5);
+                    const p = getPoint(i, score);
+                    return `${p.x},${p.y}`;
+                }).join(' ');
+
+                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                poly.setAttribute('points', pts);
+                poly.setAttribute('fill', opt.color);
+                poly.setAttribute('fill-opacity', fillOpacity);
+                poly.setAttribute('stroke', opt.color);
+                poly.setAttribute('stroke-width', highlightedOptionId === opt.id ? '3' : '2');
+                poly.setAttribute('stroke-opacity', strokeOpacity);
+                svg.appendChild(poly);
+
+                // Vertices dots
+                state.criteria.forEach((c, i) => {
+                    const score = Number(opt.scores[c.id] ?? 5);
+                    const p = getPoint(i, score);
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', p.x);
+                    circle.setAttribute('cy', p.y);
+                    circle.setAttribute('r', '3.5');
+                    circle.setAttribute('fill', opt.color);
+                    circle.setAttribute('fill-opacity', strokeOpacity);
+                    svg.appendChild(circle);
+                });
+
+                // Radar Legend Item
+                const legItem = document.createElement('button');
+                legItem.className = `w-full text-left px-3 py-2 rounded-xl border text-xs font-semibold flex items-center justify-between transition ${
+                    highlightedOptionId === opt.id 
+                        ? 'bg-slate-900 text-white border-slate-900' 
+                        : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200/80'
+                }`;
+                legItem.onmouseenter = () => { highlightedOptionId = opt.id; renderRadarChart(results); };
+                legItem.onmouseleave = () => { highlightedOptionId = null; renderRadarChart(results); };
+                legItem.innerHTML = `
+                    <span class="flex items-center gap-2 truncate">
+                        <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${opt.color}"></span>
+                        <span class="truncate">${opt.name}</span>
+                    </span>
+                    <span class="font-bold ml-2">${opt.matchPercentage.toFixed(0)}%</span>
+                `;
+                legend.appendChild(legItem);
+            });
+        }
+
+        // Render Interactive Option Score Matrix Table
+        function renderMatrixTable() {
+            const headerRow = document.getElementById('matrixHeaderRow');
+            const tbody = document.getElementById('matrixTableBody');
+            headerRow.innerHTML = '';
+            tbody.innerHTML = '';
+
+            // Header Columns
+            const optTh = document.createElement('th');
+            optTh.className = 'py-3 px-4 text-left';
+            optTh.textContent = 'Option Candidate';
+            headerRow.appendChild(optTh);
+
+            state.criteria.forEach((c, idx) => {
+                const color = CRITERION_COLORS[idx % CRITERION_COLORS.length];
+                const th = document.createElement('th');
+                th.className = 'py-3 px-3 text-center';
+                th.innerHTML = `
+                    <div class="inline-flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full" style="background:${color}"></span>
+                        <span class="text-slate-700">${c.name}</span>
+                    </div>
+                `;
+                headerRow.appendChild(th);
+            });
+
+            const totalTh = document.createElement('th');
+            totalTh.className = 'py-3 px-4 text-right';
+            totalTh.textContent = 'Weighted Match';
+            headerRow.appendChild(totalTh);
+
+            // Rows for each Option
+            const { results } = computeRankings();
+            state.options.forEach(opt => {
+                const rankedObj = results.find(r => r.id === opt.id);
+                const rankIdx = results.findIndex(r => r.id === opt.id);
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/80 transition';
+
+                let cellsHtml = `
+                    <td class="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                        <div class="flex items-center gap-2">
+                            <span>${opt.emoji || '📌'}</span>
+                            <span>${opt.name}</span>
+                        </div>
+                    </td>
+                `;
+
+                state.criteria.forEach(c => {
+                    const val = Number(opt.scores[c.id] ?? 5);
+                    cellsHtml += `
+                        <td class="py-3.5 px-3 text-center">
+                            <div class="flex flex-col items-center gap-1 max-w-[120px] mx-auto">
+                                <div class="flex items-center justify-between w-full text-xs">
+                                    <span class="text-[10px] text-slate-400">Rate</span>
+                                    <span id="cell-val-${opt.id}-${c.id}" class="font-bold text-indigo-600">${val}/10</span>
+                                </div>
+                                <input type="range" min="1" max="10" step="1" value="${val}"
+                                    oninput="handleMatrixScoreChange('${opt.id}', '${c.id}', this.value)"
+                                    class="matrix-slider w-full" />
+                            </div>
+                        </td>
+                    `;
+                });
+
+                cellsHtml += `
+                    <td id="matrix-total-${opt.id}" class="py-3.5 px-4 text-right font-extrabold text-violet-700 whitespace-nowrap">
+                        ${rankedObj ? rankedObj.matchPercentage.toFixed(1) : '0.0'}% (#${rankIdx + 1})
+                    </td>
+                `;
+
+                tr.innerHTML = cellsHtml;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Handle Matrix Cell Rating Change
+        function handleMatrixScoreChange(optionId, criterionId, newValue) {
+            const opt = state.options.find(o => o.id === optionId);
+            if (!opt) return;
+            opt.scores[criterionId] = Number(newValue);
+
+            const label = document.getElementById(`cell-val-${optionId}-${criterionId}`);
+            if (label) label.textContent = `${newValue}/10`;
+
+            updateDynamicVisuals();
+        }
+
+        // Equalize All Weights to 5
+        function equalizeWeights() {
+            state.criteria.forEach(c => c.weight = 5);
+            renderCriteriaSliders();
+            updateDynamicVisuals();
+            showToast('All criterion weights equalized to 5');
+        }
+
+        // Reset current scenario to default preset values
+        function resetScenario() {
+            loadPreset(currentPresetKey);
+            showToast('Scenario reset to default ratings & weights');
+        }
+
+        // Add Custom Criterion
+        function addCriterion() {
+            const input = document.getElementById('newCriterionInput');
+            const name = input.value.trim();
+            if (!name) {
+                showToast('Please enter a criterion name', 'warn');
+                return;
+            }
+            if (state.criteria.length >= 8) {
+                showToast('Maximum 8 criteria supported for clarity', 'warn');
+                return;
+            }
+
+            const newId = 'c_' + Date.now();
+            state.criteria.push({
+                id: newId,
+                name,
+                weight: 7,
+                icon: 'star'
+            });
+
+            // Initialize default score of 7 for all existing options
+            state.options.forEach(opt => {
+                opt.scores[newId] = 7;
+            });
+
+            input.value = '';
+            renderAll();
+            showToast(`Added criterion "${name}"`);
+        }
+
+        // Remove Criterion
+        function removeCriterion(criterionId) {
+            if (state.criteria.length <= 2) {
+                showToast('Keep at least 2 criteria to compare options', 'warn');
+                return;
+            }
+            state.criteria = state.criteria.filter(c => c.id !== criterionId);
+            state.options.forEach(opt => {
+                delete opt.scores[criterionId];
+            });
+            renderAll();
+            showToast('Criterion removed');
+        }
+
+        // Rename Criterion
+        function renameCriterion(criterionId, newName) {
+            const c = state.criteria.find(item => item.id === criterionId);
+            if (c && newName.trim()) {
+                c.name = newName.trim();
+                updateDynamicVisuals();
+                renderMatrixTable();
+            }
+        }
+
+        // Add Custom Option
+        function addOption() {
+            const input = document.getElementById('newOptionInput');
+            const name = input.value.trim();
+            if (!name) {
+                showToast('Please enter an option name', 'warn');
+                return;
+            }
+            if (state.options.length >= 6) {
+                showToast('Maximum 6 options recommended for clear comparison', 'warn');
+                return;
+            }
+
+            const emojis = ['🌟', '⚡', '🎯', '🔥', '💎', '🛸'];
+            const newScores = {};
+            state.criteria.forEach(c => {
+                newScores[c.id] = Math.floor(Math.random() * 4) + 6; // 6 to 9 initial rating
+            });
+
+            state.options.push({
+                id: 'o_' + Date.now(),
+                name,
+                emoji: emojis[state.options.length % emojis.length],
+                note: 'Custom added candidate — adjust scores in matrix below',
+                scores: newScores
+            });
+
+            input.value = '';
+            renderAll();
+            showToast(`Added option "${name}"`);
+        }
+
+        // Remove Option
+        function removeOption(optionId) {
+            if (state.options.length <= 2) {
+                showToast('Keep at least 2 options to compare', 'warn');
+                return;
+            }
+            state.options = state.options.filter(o => o.id !== optionId);
+            renderAll();
+            showToast('Option removed');
+        }
+
+        // Rename Option
+        function renameOption(optionId, newName) {
+            const opt = state.options.find(o => o.id === optionId);
+            if (opt && newName.trim()) {
+                opt.name = newName.trim();
+                updateDynamicVisuals();
+                renderMatrixTable();
+            }
+        }
+
+        // Switch Chart View Mode ('stacked' vs 'radar')
+        function setChartMode(mode) {
+            chartMode = mode;
+            const stackedView = document.getElementById('stackedChartView');
+            const radarView = document.getElementById('radarChartView');
+            const tabStacked = document.getElementById('tab-stacked');
+            const tabRadar = document.getElementById('tab-radar');
+
+            if (mode === 'stacked') {
+                stackedView.classList.remove('hidden');
+                radarView.classList.add('hidden');
+                tabStacked.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 bg-white text-slate-900 shadow-sm';
+                tabRadar.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-slate-600 hover:text-slate-900';
+            } else {
+                stackedView.classList.add('hidden');
+                radarView.classList.remove('hidden');
+                tabRadar.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 bg-white text-slate-900 shadow-sm';
+                tabStacked.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 text-slate-600 hover:text-slate-900';
+                const { results } = computeRankings();
+                renderRadarChart(results);
+            }
+        }
+
+        // Toggle Option Score Matrix Collapse
+        function toggleMatrixCollapse() {
+            matrixCollapsed = !matrixCollapsed;
+            const body = document.getElementById('matrixBody');
+            const text = document.getElementById('matrixToggleText');
+            const icon = document.getElementById('matrixToggleIcon');
+
+            if (matrixCollapsed) {
+                body.classList.add('hidden');
+                text.textContent = 'Show Matrix';
+                icon.setAttribute('data-lucide', 'chevron-down');
+            } else {
+                body.classList.remove('hidden');
+                text.textContent = 'Hide Matrix';
+                icon.setAttribute('data-lucide', 'chevron-up');
+            }
+            lucide.createIcons();
+        }
+
+        // Master Render
+        function renderAll() {
+            renderCriteriaSliders();
+            updateDynamicVisuals();
+            renderMatrixTable();
+            lucide.createIcons();
+        }
+
+        // Initialize on DOM load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadPreset('laptop');
+        });
+    </script>
+</body>
+</html>

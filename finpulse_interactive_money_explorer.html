@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinPulse — Interactive Money Explorer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.25s ease, color 0.25s ease;
+        }
+
+        /* Custom Range Sliders */
+        input[type=range].fin-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 7px;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.25);
+            outline: none;
+        }
+        input[type=range].fin-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--thumb-color, #10b981);
+            border: 2.5px solid #ffffff;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            transition: transform 0.15s ease;
+        }
+        input[type=range].fin-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.18);
+        }
+
+        /* Smooth SVG Transitions */
+        .donut-segment {
+            transition: stroke-dasharray 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+                        stroke-dashoffset 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+                        stroke-width 0.2s ease,
+                        opacity 0.2s ease;
+            cursor: pointer;
+        }
+        .donut-segment:hover {
+            stroke-width: 30;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-emerald-500 selection:text-white">
+
+    <!-- Toast Notification Stack -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="sticky top-0 z-30 bg-slate-900/85 dark:bg-slate-900/85 backdrop-blur-md border-b border-slate-800 transition-colors" id="mainHeader">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
+                <!-- Brand & Sample Badge -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                            <i data-lucide="wallet" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h1 class="font-display font-extrabold text-lg tracking-tight text-white dark:text-white light-title">FinPulse</h1>
+                                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Sample Data Only</span>
+                            </div>
+                            <p class="text-xs text-slate-400">Spending by category, duplicates to check & live savings simulator</p>
+                        </div>
+                    </div>
+
+                    <!-- Mobile Theme Toggle -->
+                    <button onclick="toggleTheme()" class="lg:hidden p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700">
+                        <i data-lucide="sun" id="mobileThemeIcon" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <!-- Center: Profile / Scenario Switcher -->
+                <div class="flex flex-wrap items-center gap-1.5 bg-slate-950/90 p-1.5 rounded-xl border border-slate-800">
+                    <button onclick="loadProfile('professional')" id="prof-professional" class="profile-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">
+                        <i data-lucide="briefcase" class="w-3.5 h-3.5"></i>
+                        <span>Young Professional</span>
+                    </button>
+                    <button onclick="loadProfile('student')" id="prof-student" class="profile-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">
+                        <i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i>
+                        <span>Student Budget</span>
+                    </button>
+                    <button onclick="loadProfile('freelancer')" id="prof-freelancer" class="profile-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all">
+                        <i data-lucide="laptop" class="w-3.5 h-3.5"></i>
+                        <span>Freelance Creator</span>
+                    </button>
+                </div>
+
+                <!-- Right: Currency Toggle, Add Expense, Reset & Theme -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <!-- Currency Selector -->
+                    <div class="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800">
+                        <button onclick="setCurrency('USD')" id="curr-USD" class="px-2.5 py-1 rounded-lg text-xs font-bold transition bg-emerald-600 text-white">$ USD</button>
+                        <button onclick="setCurrency('INR')" id="curr-INR" class="px-2.5 py-1 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white">₹ INR</button>
+                        <button onclick="setCurrency('EUR')" id="curr-EUR" class="px-2.5 py-1 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white">€ EUR</button>
+                    </div>
+
+                    <!-- Add Transaction Modal Trigger -->
+                    <button onclick="openAddModal()" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-emerald-600/20">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        <span>Add Expense</span>
+                    </button>
+
+                    <!-- Reset Sample Data -->
+                    <button onclick="resetCurrentProfile()" title="Reset sample data to defaults" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition flex items-center gap-1 border border-slate-700">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Reset</span>
+                    </button>
+
+                    <!-- Desktop Light/Dark Mode Toggle -->
+                    <button onclick="toggleTheme()" title="Switch Light / Dark Theme" class="hidden lg:flex p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+                        <i data-lucide="sun" id="desktopThemeIcon" class="w-4 h-4 text-amber-400"></i>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT WORKSPACE -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- 1. KPI SUMMARY CARDS -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Monthly Income -->
+            <div class="fin-card bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Monthly Take-Home</span>
+                    <div class="w-8 h-8 rounded-lg bg-sky-500/15 text-sky-400 flex items-center justify-center">
+                        <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div id="kpiIncome" class="text-2xl sm:text-3xl font-display font-extrabold text-white">$5,200</div>
+                    <div class="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
+                        <span class="inline-block w-2 h-2 rounded-full bg-sky-400"></span>
+                        <span id="kpiProfileLabel">Young Professional Profile</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Spending -->
+            <div class="fin-card bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Current Spending</span>
+                    <div class="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center">
+                        <i data-lucide="credit-card" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div id="kpiSpending" class="text-2xl sm:text-3xl font-display font-extrabold text-white">$3,640</div>
+                    <div class="text-xs text-slate-400 mt-1 flex items-center justify-between">
+                        <span id="kpiSpendPct">70.0% of income</span>
+                        <span id="kpiTxCount" class="text-indigo-400 font-medium">18 items</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flagged Duplicates & Leaks -->
+            <div class="fin-card bg-slate-900 border border-amber-500/30 rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-amber-400">Duplicates to Check</span>
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div id="kpiDuplicatesAmt" class="text-2xl sm:text-3xl font-display font-extrabold text-amber-400">$142</div>
+                    <div class="text-xs text-slate-400 mt-1 flex items-center justify-between">
+                        <span id="kpiDuplicatesCount">4 flagged charges</span>
+                        <a href="#duplicatesSection" class="text-amber-300 hover:underline font-semibold">Review →</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projected Monthly Savings -->
+            <div class="fin-card bg-gradient-to-br from-emerald-950/90 via-slate-900 to-teal-950/80 border border-emerald-500/40 rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden shadow-lg shadow-emerald-950/30">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-emerald-300">Optimized Monthly Savings</span>
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center">
+                        <i data-lucide="piggy-bank" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="flex items-baseline gap-2">
+                        <div id="kpiSavings" class="text-2xl sm:text-3xl font-display font-extrabold text-emerald-400">$1,890</div>
+                        <span id="kpiSavingsBoostBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">+$330 boost</span>
+                    </div>
+                    <div class="text-xs text-emerald-200/80 mt-1">
+                        Savings rate: <strong id="kpiSavingsRate" class="text-white">36.3%</strong> of income
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. MIDDLE ROW: SPENDING BY CATEGORY (7 COLS) + DUPLICATES TO CHECK (5 COLS) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- LEFT: SPENDING BY CATEGORY VISUALIZATION (7 cols) -->
+            <div class="lg:col-span-7 fin-card bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-base font-display font-bold text-white flex items-center gap-2">
+                            <i data-lucide="pie-chart" class="w-4 h-4 text-indigo-400"></i>
+                            <span>1. Spending by Category</span>
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Click any category slice or bar to filter transactions below</p>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button id="clearCatFilterBtn" onclick="selectCategoryFilter('ALL')" class="hidden px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-semibold items-center gap-1 hover:bg-indigo-500/30 transition">
+                            <span id="activeCatFilterText">Filter: Dining</span>
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Donut Chart + Interactive Category Bars Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                    <!-- Interactive SVG Donut Chart (5 cols) -->
+                    <div class="md:col-span-5 flex flex-col items-center justify-center relative">
+                        <div class="relative w-52 h-52 flex items-center justify-center">
+                            <svg id="categoryDonutSvg" viewBox="0 0 220 220" class="w-full h-full -rotate-90 overflow-visible"></svg>
+                            <!-- Center Donut Readout -->
+                            <div class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-4">
+                                <span id="donutCenterLabel" class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Total Spend</span>
+                                <span id="donutCenterValue" class="text-xl font-display font-extrabold text-white mt-0.5">$3,640</span>
+                                <span id="donutCenterSub" class="text-[11px] text-emerald-400 font-medium mt-0.5">100% of expenses</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Horizontal Category Breakdown Bars (7 cols) -->
+                    <div id="categoryBarsList" class="md:col-span-7 space-y-2.5">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: DUPLICATES & SUBSCRIPTION LEAK DETECTOR (5 cols) -->
+            <div id="duplicatesSection" class="lg:col-span-5 fin-card bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-base font-display font-bold text-white flex items-center gap-2">
+                                <i data-lucide="scan-search" class="w-4 h-4 text-amber-400"></i>
+                                <span>2. Duplicates to Check</span>
+                            </h2>
+                            <span id="dupHeaderBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">4 Actionable</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-0.5">Flagged double-billings & overlapping subscriptions</p>
+                    </div>
+
+                    <button onclick="restoreAllDuplicates()" id="restoreDupsBtn" class="text-xs font-semibold text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition flex items-center gap-1" title="Restore resolved duplicates to test again">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                        <span>Restore All</span>
+                    </button>
+                </div>
+
+                <!-- Summary Banner inside Duplicates Panel -->
+                <div class="bg-amber-500/10 border border-amber-500/25 rounded-xl p-3 flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        </div>
+                        <div class="text-xs">
+                            <div class="font-semibold text-amber-200">Instant Savings Opportunity</div>
+                            <div class="text-slate-400">Resolve flagged items to reclaim <strong id="dupReclaimableAmt" class="text-amber-300">$142</strong>/mo</div>
+                        </div>
+                    </div>
+                    <button onclick="resolveAllDuplicates()" id="resolveAllBtn" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition shrink-0 shadow">
+                        Fix All
+                    </button>
+                </div>
+
+                <!-- Flagged Items List -->
+                <div id="duplicatesListContainer" class="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 3. INTERACTIVE SAVINGS SLIDER & COMPOUND WEALTH PROJECTOR -->
+        <section class="fin-card bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-base sm:text-lg font-display font-bold text-white flex items-center gap-2">
+                            <i data-lucide="sliders" class="w-5 h-5 text-emerald-400"></i>
+                            <span>3. Interactive Savings Slider & Wealth Projector</span>
+                        </h2>
+                        <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Live Simulator</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-0.5">Use the sliders to trim flexible spending categories and see how your monthly savings compound over time</p>
+                </div>
+
+                <!-- Preset Savings Challenges -->
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-xs text-slate-400 mr-1">Quick Presets:</span>
+                    <button onclick="applySavingsPreset('current')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition">0% Trim (Baseline)</button>
+                    <button onclick="applySavingsPreset('mindful')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 transition">Mindful (-15%)</button>
+                    <button onclick="applySavingsPreset('fire')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-violet-500/15 hover:bg-violet-500/25 text-violet-300 border border-violet-500/30 transition">Aggressive Saver (-35%)</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+                <!-- LEFT: Master & Category Trim Sliders (5 cols) -->
+                <div class="lg:col-span-5 space-y-4">
+
+                    <!-- Master Discretionary Trim Slider -->
+                    <div class="bg-gradient-to-r from-emerald-950/70 to-slate-950 border border-emerald-500/30 rounded-xl p-4 space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Master Flexible Spend Trim</span>
+                                <p class="text-[11px] text-slate-400">Scales Dining, Shopping, Entertainment & Subs together</p>
+                            </div>
+                            <span id="masterTrimLabel" class="text-lg font-display font-extrabold text-emerald-400">15%</span>
+                        </div>
+                        <input id="masterTrimSlider" type="range" min="0" max="50" step="5" value="15"
+                            style="--thumb-color: #10b981"
+                            oninput="handleMasterTrimChange(this.value)"
+                            class="fin-slider" />
+                        <div class="flex justify-between text-[10px] text-slate-400 font-medium">
+                            <span>0% (No cutback)</span>
+                            <span>25% Moderate</span>
+                            <span>50% Max Cut</span>
+                        </div>
+                    </div>
+
+                    <!-- Individual Category Cutback Sliders -->
+                    <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-4 space-y-3.5">
+                        <div class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                            <span>Fine-Tune Category Cutbacks</span>
+                            <span id="sliderSavedMonthlyBadge" class="text-emerald-400 font-bold">+$188/mo saved</span>
+                        </div>
+
+                        <div id="categorySlidersContainer" class="space-y-3">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Investment Return & Horizon Controls -->
+                    <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-300">Annual Return Rate (APY / Market)</span>
+                            <span id="apyValueLabel" class="text-xs font-bold text-sky-400">8.0% Index Fund</span>
+                        </div>
+                        <input id="apySlider" type="range" min="1" max="14" step="0.5" value="8"
+                            style="--thumb-color: #38bdf8"
+                            oninput="handleApyChange(this.value)"
+                            class="fin-slider" />
+
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                            <span class="text-xs font-semibold text-slate-300">Projection Horizon</span>
+                            <div class="inline-flex rounded-lg bg-slate-900 p-1 border border-slate-800">
+                                <button onclick="setHorizon(1)" id="hz-1" class="px-2.5 py-1 rounded-md text-xs font-bold text-slate-400 hover:text-white transition">1 Yr</button>
+                                <button onclick="setHorizon(5)" id="hz-5" class="px-2.5 py-1 rounded-md text-xs font-bold bg-sky-500 text-white transition">5 Yrs</button>
+                                <button onclick="setHorizon(10)" id="hz-10" class="px-2.5 py-1 rounded-md text-xs font-bold text-slate-400 hover:text-white transition">10 Yrs</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Live Compound Growth Trajectory Chart (7 cols) -->
+                <div class="lg:col-span-7 bg-slate-950/60 border border-slate-800/90 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4">
+                    <!-- Top Projection Readout Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+                            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Baseline Path (<span class="hz-label">5</span> Yrs)</div>
+                            <div id="projBaselineTotal" class="text-lg font-display font-bold text-slate-200 mt-0.5">$114,600</div>
+                            <div class="text-[11px] text-slate-400">Without trims or fixes</div>
+                        </div>
+                        <div class="bg-slate-900/90 border border-emerald-500/30 rounded-xl p-3">
+                            <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Optimized Path (<span class="hz-label">5</span> Yrs)</div>
+                            <div id="projOptimizedTotal" class="text-lg font-display font-extrabold text-emerald-400 mt-0.5">$138,850</div>
+                            <div class="text-[11px] text-emerald-300/80">With sliders + duplicate fixes</div>
+                        </div>
+                        <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3">
+                            <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-300">Extra Wealth Gained</div>
+                            <div id="projNetGain" class="text-lg font-display font-extrabold text-white mt-0.5">+$24,250</div>
+                            <div id="projMonthlyDelta" class="text-[11px] text-emerald-300">+$330/mo invested</div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive SVG Area/Line Chart -->
+                    <div class="w-full pt-2">
+                        <svg id="wealthChartSvg" viewBox="0 0 600 240" class="w-full h-auto overflow-visible"></svg>
+                    </div>
+
+                    <!-- Chart Legend -->
+                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 border-t border-slate-800/80 pt-3">
+                        <div class="flex items-center gap-4">
+                            <span class="flex items-center gap-1.5">
+                                <span class="w-3 h-1 rounded-full bg-emerald-400 inline-block"></span>
+                                <strong class="text-slate-200">Optimized Trajectory</strong> (Sliders + Reclaimed Duplicates)
+                            </span>
+                            <span class="flex items-center gap-1.5">
+                                <span class="w-3 h-1 rounded-full bg-slate-500 inline-block"></span>
+                                <span>Baseline Trajectory</span>
+                            </span>
+                        </div>
+                        <span class="text-[11px]">Compounded monthly</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- 4. INTERACTIVE TRANSACTION LEDGER -->
+        <section class="fin-card bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+            <div class="p-5 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-base font-display font-bold text-white flex items-center gap-2">
+                        <i data-lucide="list-filter" class="w-4 h-4 text-sky-400"></i>
+                        <span>4. Sample Transaction Explorer</span>
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Search, filter by category, sort, or delete any sample transaction to test live recalculation</p>
+                </div>
+
+                <!-- Search & Sort Controls -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="relative">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                        <input id="txSearchInput" type="text" placeholder="Search merchant or note..."
+                            oninput="renderTransactions()"
+                            class="pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 w-48 sm:w-56" />
+                    </div>
+
+                    <select id="txSortSelect" onchange="renderTransactions()" class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-semibold text-slate-200 focus:outline-none focus:border-emerald-500">
+                        <option value="date-desc">Newest First</option>
+                        <option value="amount-desc">Highest Amount</option>
+                        <option value="amount-asc">Lowest Amount</option>
+                        <option value="merchant-asc">Merchant (A–Z)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Category Quick Filter Pills -->
+            <div id="ledgerFilterPills" class="px-5 py-3 bg-slate-950/50 border-b border-slate-800/80 flex items-center gap-1.5 overflow-x-auto">
+                <!-- Populated via JS -->
+            </div>
+
+            <!-- Transactions Table -->
+            <div class="overflow-x-auto max-h-[420px]">
+                <table class="w-full text-left border-collapse min-w-[640px]">
+                    <thead class="sticky top-0 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400 z-10">
+                        <tr>
+                            <th class="py-3 px-5">Date</th>
+                            <th class="py-3 px-4">Merchant & Description</th>
+                            <th class="py-3 px-4">Category</th>
+                            <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4 text-right">Amount</th>
+                            <th class="py-3 px-5 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="txTableBody" class="divide-y divide-slate-800/70 text-xs sm:text-sm">
+                        <!-- Populated via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ADD SAMPLE TRANSACTION MODAL -->
+    <div id="addTxModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="font-display font-bold text-base text-white">Add Sample Expense</h3>
+                </div>
+                <button onclick="closeAddModal()" class="p-1 rounded-lg text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Merchant / Title</label>
+                    <input id="modalMerchant" type="text" placeholder="e.g. Whole Foods Market" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Amount (in Base USD)</label>
+                        <input id="modalAmount" type="number" min="1" step="1" value="45" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Category</label>
+                        <select id="modalCategory" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-emerald-500">
+                            <option value="Housing">Housing & Utilities</option>
+                            <option value="Groceries">Groceries</option>
+                            <option value="Dining Out" selected>Dining & Coffee</option>
+                            <option value="Subscriptions">Subscriptions</option>
+                            <option value="Shopping">Shopping & Tech</option>
+                            <option value="Transport">Transport & Transit</option>
+                            <option value="Entertainment">Entertainment</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 pt-1">
+                    <input id="modalFlagDuplicate" type="checkbox" class="rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-0" />
+                    <label for="modalFlagDuplicate" class="text-xs text-slate-300">Flag this item as a suspected duplicate charge to test detector</label>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+                <button onclick="closeAddModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">Cancel</button>
+                <button onclick="submitNewTransaction()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white shadow-md">Add Transaction</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-xs text-slate-500 border-t border-slate-900 mt-6">
+        FinPulse Interactive Money Explorer • Simulated Sample Financial Data Only • Built for Interactive Exploration
+    </footer>
+
+    <!-- APPLICATION LOGIC -->
+    <script>
+        // ============================================================================
+        // 1. CATEGORY DEFINITIONS & COLORS
+        // ============================================================================
+        const CATEGORIES = {
+            'Housing':       { color: '#6366f1', icon: 'home',        flexible: false },
+            'Groceries':     { color: '#10b981', icon: 'shopping-basket', flexible: false },
+            'Dining Out':    { color: '#f59e0b', icon: 'utensils',    flexible: true },
+            'Subscriptions': { color: '#ec4899', icon: 'repeat',      flexible: true },
+            'Shopping':      { color: '#8b5cf6', icon: 'shopping-bag',flexible: true },
+            'Transport':     { color: '#0ea5e9', icon: 'car',         flexible: false },
+            'Entertainment': { color: '#14b8a6', icon: 'film',        flexible: true }
+        };
+
+        const CURRENCIES = {
+            USD: { symbol: '$', rate: 1,    locale: 'en-US' },
+            INR: { symbol: '₹', rate: 83.5, locale: 'en-IN' },
+            EUR: { symbol: '€', rate: 0.92, locale: 'de-DE' }
+        };
+
+        // ============================================================================
+        // 2. THREE RICH SAMPLE FINANCIAL PROFILES
+        // ============================================================================
+        const SAMPLE_PROFILES = {
+            professional: {
+                name: 'Young Professional',
+                monthlyIncome: 5200,
+                transactions: [
+                    { id: 't1',  date: '2025-05-01', merchant: 'skyline Apartments', note: 'Monthly Rent & Water', category: 'Housing', amount: 1450, isDuplicate: false },
+                    { id: 't2',  date: '2025-05-02', merchant: 'ConEdison Electric', note: 'Utility Bill', category: 'Housing', amount: 115, isDuplicate: false },
+                    { id: 't3',  date: '2025-05-03', merchant: 'Trader Joe’s', note: 'Weekly Groceries', category: 'Groceries', amount: 165, isDuplicate: false },
+                    { id: 't4',  date: '2025-05-05', merchant: 'Whole Foods Market', note: 'Organic Produce & Pantry', category: 'Groceries', amount: 190, isDuplicate: false },
+                    { id: 't5',  date: '2025-05-06', merchant: 'Blue Bottle Coffee', note: 'Morning Latte & Pastry', category: 'Dining Out', amount: 18, isDuplicate: false },
+                    { id: 't6',  date: '2025-05-06', merchant: 'Blue Bottle Coffee', note: 'Identical terminal swipe 1 min later', category: 'Dining Out', amount: 18, isDuplicate: true, dupReason: 'Double-charged within 60 seconds at same POS terminal' },
+                    { id: 't7',  date: '2025-05-08', merchant: 'Sweetgreen', note: 'Work Lunch Bowl', category: 'Dining Out', amount: 42, isDuplicate: false },
+                    { id: 't8',  date: '2025-05-10', merchant: 'Osteria Mozza', note: 'Friday Dinner with Friends', category: 'Dining Out', amount: 145, isDuplicate: false },
+                    { id: 't9',  date: '2025-05-11', merchant: 'StreamMax Ultra HD', note: 'Monthly Streaming Plan', category: 'Subscriptions', amount: 22, isDuplicate: false },
+                    { id: 't10', date: '2025-05-11', merchant: 'StreamMax Basic Legacy', note: 'Old uncancelled email account', category: 'Subscriptions', amount: 16, isDuplicate: true, dupReason: 'Overlapping legacy plan on secondary email address' },
+                    { id: 't11', date: '2025-05-12', merchant: 'CloudVault 2TB Pro', note: 'Annual/Monthly Cloud Storage', category: 'Subscriptions', amount: 29, isDuplicate: false },
+                    { id: 't12', date: '2025-05-12', merchant: 'CloudVault 2TB Pro', note: 'Duplicate billing cycle charge', category: 'Subscriptions', amount: 29, isDuplicate: true, dupReason: 'Duplicate gateway retry charge on same date' },
+                    { id: 't13', date: '2025-05-14', merchant: 'Equinox / Apex Gym', note: 'Unused Premium Fitness Pass', category: 'Subscriptions', amount: 79, isDuplicate: true, dupReason: '0 check-ins recorded in the last 60 days' },
+                    { id: 't14', date: '2025-05-15', merchant: 'Metro Transit Pass', note: 'Monthly Commuter Card', category: 'Transport', amount: 132, isDuplicate: false },
+                    { id: 't15', date: '2025-05-17', merchant: 'Uber Rides', note: 'Airport & Evening Trips', category: 'Transport', amount: 88, isDuplicate: false },
+                    { id: 't16', date: '2025-05-19', merchant: 'Nordstrom & Uniqlo', note: 'Spring Wardrobe Refresh', category: 'Shopping', amount: 260, isDuplicate: false },
+                    { id: 't17', date: '2025-05-21', merchant: 'Amazon Marketplace', note: 'Smart Home & Kitchen Gear', category: 'Shopping', amount: 195, isDuplicate: false },
+                    { id: 't18', date: '2025-05-23', merchant: 'AMC IMAX & Concert', note: 'Weekend Live Show & Tickets', category: 'Entertainment', amount: 165, isDuplicate: false },
+                    { id: 't19', date: '2025-05-25', merchant: 'DoorDash Delivery', note: 'Late-night Thai Takeout', category: 'Dining Out', amount: 95, isDuplicate: false }
+                ]
+            },
+            student: {
+                name: 'Student Budget',
+                monthlyIncome: 1850,
+                transactions: [
+                    { id: 's1',  date: '2025-05-01', merchant: 'Campus Commons Dorm', note: 'Shared Room Rent & Wifi', category: 'Housing', amount: 680, isDuplicate: false },
+                    { id: 's2',  date: '2025-05-03', merchant: 'Aldi Supermarket', note: 'Bulk Groceries & Snacks', category: 'Groceries', amount: 145, isDuplicate: false },
+                    { id: 's3',  date: '2025-05-06', merchant: 'Campus Roast Cafe', note: 'Iced Matcha & Bagel', category: 'Dining Out', amount: 12, isDuplicate: false },
+                    { id: 's4',  date: '2025-05-06', merchant: 'Campus Roast Cafe', note: 'Duplicate tap charge', category: 'Dining Out', amount: 12, isDuplicate: true, dupReason: 'Apple Pay double-tap registered twice' },
+                    { id: 's5',  date: '2025-05-09', merchant: 'Chipotle Mexican Grill', note: 'Post-class Burrito Bowls', category: 'Dining Out', amount: 68, isDuplicate: false },
+                    { id: 's6',  date: '2025-05-11', merchant: 'StudyHelper AI Pro', note: 'Monthly Homework Tool', category: 'Subscriptions', amount: 20, isDuplicate: false },
+                    { id: 's7',  date: '2025-05-11', merchant: 'StudyHelper AI Pro', note: 'Double-billed renewal', category: 'Subscriptions', amount: 20, isDuplicate: true, dupReason: 'Charged twice on renewal date' },
+                    { id: 's8',  date: '2025-05-13', merchant: 'MusicWave Full Price', note: 'Non-student tier billed', category: 'Subscriptions', amount: 17, isDuplicate: true, dupReason: 'Redundant subscription — already bundled in Student Pack' },
+                    { id: 's9',  date: '2025-05-15', merchant: 'City Bike & Bus Pass', note: 'Student Mobility Pass', category: 'Transport', amount: 55, isDuplicate: false },
+                    { id: 's10', date: '2025-05-18', merchant: 'University Bookstore', note: 'Lab Supplies & Apparel', category: 'Shopping', amount: 115, isDuplicate: false },
+                    { id: 's11', date: '2025-05-21', merchant: 'Steam & Bowling Night', note: 'Weekend Gaming & Social', category: 'Entertainment', amount: 75, isDuplicate: false }
+                ]
+            },
+            freelancer: {
+                name: 'Freelance Creator',
+                monthlyIncome: 6800,
+                transactions: [
+                    { id: 'f1',  date: '2025-05-01', merchant: 'Loft Studio Lease', note: 'Live/Work Loft Rent', category: 'Housing', amount: 1950, isDuplicate: false },
+                    { id: 'f2',  date: '2025-05-02', merchant: 'Fiber Gigabit Internet', note: 'High-Speed Upload Line', category: 'Housing', amount: 110, isDuplicate: false },
+                    { id: 'f3',  date: '2025-05-04', merchant: 'Sprouts Farmers Market', note: 'Weekly Fresh Groceries', category: 'Groceries', amount: 340, isDuplicate: false },
+                    { id: 'f4',  date: '2025-05-07', merchant: 'DesignCloud Creative Suite', note: 'All Apps Monthly Plan', category: 'Subscriptions', amount: 59, isDuplicate: false },
+                    { id: 'f5',  date: '2025-05-07', merchant: 'DesignCloud Standalone App', note: 'Overlapping single-app license', category: 'Subscriptions', amount: 34, isDuplicate: true, dupReason: 'Included inside your All Apps bundle — redundant license' },
+                    { id: 'f6',  date: '2025-05-09', merchant: 'StockFootage Unlimited', note: 'Unused trial auto-renewed', category: 'Subscriptions', amount: 49, isDuplicate: true, dupReason: 'Free trial converted without usage in 45 days' },
+                    { id: 'f7',  date: '2025-05-12', merchant: 'Artisan Roasters Co.', note: 'Client Coffee Meetup', category: 'Dining Out', amount: 36, isDuplicate: false },
+                    { id: 'f8',  date: '2025-05-12', merchant: 'Artisan Roasters Co.', note: 'Duplicate receipt #4092', category: 'Dining Out', amount: 36, isDuplicate: true, dupReason: 'Identical amount charged twice on same day' },
+                    { id: 'f9',  date: '2025-05-15', merchant: 'Sushi Roku & Bistro', note: 'Dining & Takeout Orders', category: 'Dining Out', amount: 285, isDuplicate: false },
+                    { id: 'f10', date: '2025-05-18', merchant: 'B&H Photo Video', note: 'Camera Lens Filter & SSD', category: 'Shopping', amount: 420, isDuplicate: false },
+                    { id: 'f11', date: '2025-05-20', merchant: 'EV Supercharging & Rides', note: 'Local Travel & Parking', category: 'Transport', amount: 190, isDuplicate: false },
+                    { id: 'f12', date: '2025-05-24', merchant: 'Indie Film Fest & Vinyl', note: 'Cultural Events & Media', category: 'Entertainment', amount: 210, isDuplicate: false }
+                ]
+            }
+        };
+
+        // ============================================================================
+        // 3. ACTIVE STATE
+        // ============================================================================
+        let currentProfileKey = 'professional';
+        let currentCurrency = 'USD';
+        let isDarkMode = true;
+
+        let state = {
+            monthlyIncome: 5200,
+            transactions: [],
+            resolvedDuplicateIds: new Set(),
+            ignoredDuplicateIds: new Set(),
+            categoryTrims: {
+                'Dining Out': 15,
+                'Subscriptions': 15,
+                'Shopping': 15,
+                'Entertainment': 15
+            },
+            apy: 8.0,
+            horizonYears: 5,
+            activeCategoryFilter: 'ALL'
+        };
+
+        // Format currency helper
+        function fmtMoney(usdAmount, showDecimals = false) {
+            const curr = CURRENCIES[currentCurrency];
+            const converted = usdAmount * curr.rate;
+            return new Intl.NumberFormat(curr.locale, {
+                style: 'currency',
+                currency: currentCurrency,
+                minimumFractionDigits: showDecimals ? 2 : 0,
+                maximumFractionDigits: showDecimals ? 2 : 0
+            }).format(converted);
+        }
+
+        // Toast Helper
+        function showToast(msg, type = 'emerald') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const borderCol = type === 'amber' ? 'border-amber-500/40 text-amber-200' : 'border-emerald-500/40 text-emerald-200';
+            toast.className = `bg-slate-900/95 backdrop-blur-md border ${borderCol} px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2 transition-all duration-300 opacity-0 translate-y-2`;
+            toast.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 shrink-0"></i><span>${msg}</span>`;
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('opacity-0', 'translate-y-2');
+            });
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 2600);
+        }
+
+        // ============================================================================
+        // 4. PROFILE & CURRENCY INITIALIZATION
+        // ============================================================================
+        function loadProfile(profileKey) {
+            currentProfileKey = profileKey;
+            const template = SAMPLE_PROFILES[profileKey];
+
+            state.monthlyIncome = template.monthlyIncome;
+            state.transactions = JSON.parse(JSON.stringify(template.transactions));
+            state.resolvedDuplicateIds.clear();
+            state.ignoredDuplicateIds.clear();
+            state.activeCategoryFilter = 'ALL';
+
+            // Update profile switcher buttons
+            document.querySelectorAll('.profile-btn').forEach(btn => {
+                btn.className = 'profile-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white';
+            });
+            const activeBtn = document.getElementById(`prof-${profileKey}`);
+            if (activeBtn) {
+                activeBtn.className = 'profile-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-emerald-600 text-white shadow';
+            }
+
+            document.getElementById('kpiProfileLabel').textContent = `${template.name} Profile`;
+            renderAll();
+        }
+
+        function resetCurrentProfile() {
+            loadProfile(currentProfileKey);
+            applySavingsPreset('mindful');
+            showToast('Sample data & sliders reset to defaults');
+        }
+
+        function setCurrency(currKey) {
+            currentCurrency = currKey;
+            ['USD', 'INR', 'EUR'].forEach(k => {
+                const btn = document.getElementById(`curr-${k}`);
+                if (k === currKey) {
+                    btn.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition bg-emerald-600 text-white';
+                } else {
+                    btn.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white';
+                }
+            });
+            renderAll();
+            showToast(`Currency switched to ${currKey}`);
+        }
+
+        // ============================================================================
+        // 5. CORE FINANCIAL CALCULATIONS
+        // ============================================================================
+        function computeFinancials() {
+            // Active transactions exclude refunded/removed duplicates
+            const activeTxs = state.transactions.filter(t => !state.resolvedDuplicateIds.has(t.id));
+
+            // Baseline spending (including unresolved duplicates)
+            const baselineSpending = state.transactions.reduce((sum, t) => sum + t.amount, 0);
+
+            // Current active spending (after duplicate removals)
+            const currentSpending = activeTxs.reduce((sum, t) => sum + t.amount, 0);
+
+            // Reclaimed from removed duplicates
+            const reclaimedDuplicatesAmt = baselineSpending - currentSpending;
+
+            // Unresolved flagged duplicates still waiting for review
+            const pendingDuplicates = activeTxs.filter(t => t.isDuplicate && !state.ignoredDuplicateIds.has(t.id));
+            const pendingDuplicatesAmt = pendingDuplicates.reduce((sum, t) => sum + t.amount, 0);
+
+            // Spending by category
+            const categoryTotals = {};
+            Object.keys(CATEGORIES).forEach(cat => categoryTotals[cat] = 0);
+            activeTxs.forEach(t => {
+                categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+            });
+
+            // Savings from category trim sliders
+            let sliderTrimSavings = 0;
+            Object.keys(state.categoryTrims).forEach(cat => {
+                const catSpend = categoryTotals[cat] || 0;
+                const trimPct = state.categoryTrims[cat] || 0;
+                sliderTrimSavings += catSpend * (trimPct / 100);
+            });
+
+            // Baseline monthly savings (before any duplicate removal or slider trim)
+            const baselineMonthlySavings = Math.max(0, state.monthlyIncome - baselineSpending);
+
+            // Optimized monthly savings (after duplicate removal + slider trims)
+            const optimizedMonthlySavings = Math.max(0, state.monthlyIncome - currentSpending + sliderTrimSavings);
+            const totalMonthlyBoost = optimizedMonthlySavings - baselineMonthlySavings;
+
+            return {
+                activeTxs,
+                baselineSpending,
+                currentSpending,
+                reclaimedDuplicatesAmt,
+                pendingDuplicates,
+                pendingDuplicatesAmt,
+                categoryTotals,
+                sliderTrimSavings,
+                baselineMonthlySavings,
+                optimizedMonthlySavings,
+                totalMonthlyBoost
+            };
+        }
+
+        // ============================================================================
+        // 6. RENDER KPI CARDS, DONUT CHART & CATEGORY BARS
+        // ============================================================================
+        function renderKPIs(fin) {
+            document.getElementById('kpiIncome').textContent = fmtMoney(state.monthlyIncome);
+            document.getElementById('kpiSpending').textContent = fmtMoney(fin.currentSpending);
+
+            const spendPct = state.monthlyIncome > 0 ? ((fin.currentSpending / state.monthlyIncome) * 100).toFixed(1) : '0.0';
+            document.getElementById('kpiSpendPct').textContent = `${spendPct}% of income`;
+            document.getElementById('kpiTxCount').textContent = `${fin.activeTxs.length} items`;
+
+            document.getElementById('kpiDuplicatesAmt').textContent = fmtMoney(fin.pendingDuplicatesAmt);
+            document.getElementById('kpiDuplicatesCount').textContent = `${fin.pendingDuplicates.length} flagged charges`;
+
+            document.getElementById('kpiSavings').textContent = fmtMoney(fin.optimizedMonthlySavings);
+            document.getElementById('kpiSavingsBoostBadge').textContent = `+${fmtMoney(fin.totalMonthlyBoost)} boost`;
+
+            const savingsRate = state.monthlyIncome > 0 ? ((fin.optimizedMonthlySavings / state.monthlyIncome) * 100).toFixed(1) : '0.0';
+            document.getElementById('kpiSavingsRate').textContent = `${savingsRate}%`;
+        }
+
+        function renderSpendingByCategory(fin) {
+            const svg = document.getElementById('categoryDonutSvg');
+            const barsContainer = document.getElementById('categoryBarsList');
+            svg.innerHTML = '';
+            barsContainer.innerHTML = '';
+
+            const radius = 82;
+            const circumference = 2 * Math.PI * radius;
+
+            // Sort categories descending by spend
+            const sortedCats = Object.keys(CATEGORIES)
+                .map(cat => ({
+                    name: cat,
+                    amount: fin.categoryTotals[cat] || 0,
+                    color: CATEGORIES[cat].color,
+                    icon: CATEGORIES[cat].icon
+                }))
+                .filter(c => c.amount > 0)
+                .sort((a, b) => b.amount - a.amount);
+
+            // Background track circle
+            const trackCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            trackCircle.setAttribute('cx', '110');
+            trackCircle.setAttribute('cy', '110');
+            trackCircle.setAttribute('r', radius);
+            trackCircle.setAttribute('fill', 'none');
+            trackCircle.setAttribute('stroke', '#1e293b');
+            trackCircle.setAttribute('stroke-width', '24');
+            svg.appendChild(trackCircle);
+
+            let accumulatedPct = 0;
+
+            sortedCats.forEach(cat => {
+                const pct = fin.currentSpending > 0 ? (cat.amount / fin.currentSpending) : 0;
+                const strokeLen = Math.max(0, pct * circumference - 3);
+                const offset = -accumulatedPct * circumference;
+                accumulatedPct += pct;
+
+                const isSelected = state.activeCategoryFilter === 'ALL' || state.activeCategoryFilter === cat.name;
+
+                // Donut Segment
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', '110');
+                circle.setAttribute('cy', '110');
+                circle.setAttribute('r', radius);
+                circle.setAttribute('fill', 'none');
+                circle.setAttribute('stroke', cat.color);
+                circle.setAttribute('stroke-width', state.activeCategoryFilter === cat.name ? '30' : '24');
+                circle.setAttribute('stroke-dasharray', `${strokeLen} ${circumference}`);
+                circle.setAttribute('stroke-dashoffset', offset);
+                circle.setAttribute('class', 'donut-segment');
+                circle.style.opacity = isSelected ? '1' : '0.3';
+
+                // Hover & Click events on Donut Slice
+                circle.addEventListener('mouseenter', () => {
+                    document.getElementById('donutCenterLabel').textContent = cat.name;
+                    document.getElementById('donutCenterValue').textContent = fmtMoney(cat.amount);
+                    document.getElementById('donutCenterSub').textContent = `${(pct * 100).toFixed(1)}% of spend`;
+                });
+                circle.addEventListener('mouseleave', () => {
+                    updateDonutCenterDefault(fin);
+                });
+                circle.addEventListener('click', () => {
+                    selectCategoryFilter(state.activeCategoryFilter === cat.name ? 'ALL' : cat.name);
+                });
+
+                svg.appendChild(circle);
+
+                // Horizontal Category Bar Row
+                const barRow = document.createElement('div');
+                barRow.onclick = () => selectCategoryFilter(state.activeCategoryFilter === cat.name ? 'ALL' : cat.name);
+                barRow.className = `p-2.5 rounded-xl border transition cursor-pointer ${
+                    state.activeCategoryFilter === cat.name
+                        ? 'bg-slate-800/90 border-indigo-500/50 ring-1 ring-indigo-500/30'
+                        : 'bg-slate-950/50 border-slate-800/80 hover:border-slate-700'
+                }`;
+
+                const trimPct = state.categoryTrims[cat.name] || 0;
+                const trimNote = trimPct > 0 ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-semibold">-${trimPct}% slider</span>` : '';
+
+                barRow.innerHTML = `
+                    <div class="flex items-center justify-between text-xs mb-1.5">
+                        <div class="flex items-center gap-2 font-semibold text-slate-200">
+                            <span class="w-2.5 h-2.5 rounded-full" style="background:${cat.color}"></span>
+                            <span>${cat.name}</span>
+                            ${trimNote}
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-slate-400 text-[11px]">${(pct * 100).toFixed(1)}%</span>
+                            <span class="font-bold text-white">${fmtMoney(cat.amount)}</span>
+                        </div>
+                    </div>
+                    <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-300" style="width:${(pct * 100).toFixed(1)}%; background:${cat.color}"></div>
+                    </div>
+                `;
+                barsContainer.appendChild(barRow);
+            });
+
+            updateDonutCenterDefault(fin);
+
+            // Show/Hide Clear Filter Badge
+            const clearBtn = document.getElementById('clearCatFilterBtn');
+            if (state.activeCategoryFilter !== 'ALL') {
+                clearBtn.classList.remove('hidden');
+                clearBtn.classList.add('inline-flex');
+                document.getElementById('activeCatFilterText').textContent = `Filter: ${state.activeCategoryFilter}`;
+            } else {
+                clearBtn.classList.add('hidden');
+                clearBtn.classList.remove('inline-flex');
+            }
+        }
+
+        function updateDonutCenterDefault(fin) {
+            if (state.activeCategoryFilter !== 'ALL') {
+                const amt = fin.categoryTotals[state.activeCategoryFilter] || 0;
+                const pct = fin.currentSpending > 0 ? ((amt / fin.currentSpending) * 100).toFixed(1) : '0.0';
+                document.getElementById('donutCenterLabel').textContent = state.activeCategoryFilter;
+                document.getElementById('donutCenterValue').textContent = fmtMoney(amt);
+                document.getElementById('donutCenterSub').textContent = `${pct}% of expenses`;
+            } else {
+                document.getElementById('donutCenterLabel').textContent = 'Total Spend';
+                document.getElementById('donutCenterValue').textContent = fmtMoney(fin.currentSpending);
+                document.getElementById('donutCenterSub').textContent = '100% of expenses';
+            }
+        }
+
+        function selectCategoryFilter(categoryName) {
+            state.activeCategoryFilter = categoryName;
+            renderAll();
+        }
+
+        // ============================================================================
+        // 7. DUPLICATES & SUBSCRIPTION LEAKS PANEL ("DUPLICATES TO CHECK")
+        // ============================================================================
+        function renderDuplicatesPanel(fin) {
+            const container = document.getElementById('duplicatesListContainer');
+            container.innerHTML = '';
+
+            document.getElementById('dupHeaderBadge').textContent = `${fin.pendingDuplicates.length} Actionable`;
+            document.getElementById('dupReclaimableAmt').textContent = fmtMoney(fin.pendingDuplicatesAmt);
+
+            const resolveAllBtn = document.getElementById('resolveAllBtn');
+            resolveAllBtn.disabled = fin.pendingDuplicates.length === 0;
+            resolveAllBtn.className = fin.pendingDuplicates.length === 0
+                ? 'px-3 py-1.5 rounded-lg bg-slate-800 text-slate-500 font-bold text-xs cursor-not-allowed shrink-0'
+                : 'px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition shrink-0 shadow';
+
+            if (fin.pendingDuplicates.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-6 text-center space-y-2">
+                        <div class="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+                            <i data-lucide="check-check" class="w-5 h-5"></i>
+                        </div>
+                        <div class="text-sm font-bold text-white">All Duplicate Alerts Resolved!</div>
+                        <p class="text-xs text-slate-400">You reclaimed <strong class="text-emerald-400">${fmtMoney(fin.reclaimedDuplicatesAmt)}/mo</strong> back into your savings plan. Click "Restore All" above to test again.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            fin.pendingDuplicates.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'bg-slate-950/80 border border-amber-500/30 rounded-xl p-3.5 space-y-2.5 hover:border-amber-400/60 transition';
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold text-white">${item.merchant}</span>
+                                <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">${item.category}</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400 mt-0.5">${item.dupReason || item.note}</p>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="text-sm font-display font-extrabold text-amber-400">${fmtMoney(item.amount)}</div>
+                            <div class="text-[10px] text-slate-500">${item.date}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 pt-1">
+                        <button onclick="resolveDuplicate('${item.id}')" class="flex-1 py-1.5 px-2.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-semibold transition flex items-center justify-center gap-1.5">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            <span>Refund / Remove (${fmtMoney(item.amount)})</span>
+                        </button>
+                        <button onclick="ignoreDuplicate('${item.id}')" class="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">
+                            Keep
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        function resolveDuplicate(txId) {
+            const tx = state.transactions.find(t => t.id === txId);
+            state.resolvedDuplicateIds.add(txId);
+            renderAll();
+            if (tx) {
+                showToast(`Reclaimed ${fmtMoney(tx.amount)} from ${tx.merchant}! Added to savings.`);
+            }
+        }
+
+        function ignoreDuplicate(txId) {
+            const tx = state.transactions.find(t => t.id === txId);
+            state.ignoredDuplicateIds.add(txId);
+            renderAll();
+            if (tx) {
+                showToast(`Marked ${tx.merchant} as verified expense`, 'amber');
+            }
+        }
+
+        function resolveAllDuplicates() {
+            const fin = computeFinancials();
+            const count = fin.pendingDuplicates.length;
+            const amt = fin.pendingDuplicatesAmt;
+            fin.pendingDuplicates.forEach(t => state.resolvedDuplicateIds.add(t.id));
+            renderAll();
+            showToast(`Resolved all ${count} flagged items! Reclaimed ${fmtMoney(amt)}/mo.`);
+        }
+
+        function restoreAllDuplicates() {
+            state.resolvedDuplicateIds.clear();
+            state.ignoredDuplicateIds.clear();
+            renderAll();
+            showToast('Restored all flagged duplicates & subscriptions', 'amber');
+        }
+
+        // ============================================================================
+        // 8. INTERACTIVE SAVINGS SLIDERS & COMPOUND WEALTH PROJECTOR
+        // ============================================================================
+        function renderCategorySliders(fin) {
+            const container = document.getElementById('categorySlidersContainer');
+            container.innerHTML = '';
+
+            document.getElementById('sliderSavedMonthlyBadge').textContent = `+${fmtMoney(fin.sliderTrimSavings)}/mo saved`;
+
+            Object.keys(state.categoryTrims).forEach(catName => {
+                const catSpend = fin.categoryTotals[catName] || 0;
+                const trimVal = state.categoryTrims[catName] || 0;
+                const savedAmt = catSpend * (trimVal / 100);
+                const color = CATEGORIES[catName]?.color || '#10b981';
+
+                const row = document.createElement('div');
+                row.className = 'space-y-1';
+                row.innerHTML = `
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-semibold text-slate-200 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full" style="background:${color}"></span>
+                            <span>${catName}</span>
+                            <span class="text-slate-500 font-normal">(${fmtMoney(catSpend)})</span>
+                        </span>
+                        <span class="font-bold text-emerald-400">
+                            -${trimVal}% (${fmtMoney(savedAmt)})
+                        </span>
+                    </div>
+                    <input type="range" min="0" max="50" step="5" value="${trimVal}"
+                        style="--thumb-color: ${color}"
+                        oninput="handleCategoryTrimSlide('${catName}', this.value)"
+                        class="fin-slider" />
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function handleMasterTrimChange(val) {
+            const num = Number(val);
+            document.getElementById('masterTrimLabel').textContent = `${num}%`;
+            Object.keys(state.categoryTrims).forEach(cat => {
+                state.categoryTrims[cat] = num;
+            });
+            renderAll();
+        }
+
+        function handleCategoryTrimSlide(catName, val) {
+            state.categoryTrims[catName] = Number(val);
+            // Update average on master slider display
+            const vals = Object.values(state.categoryTrims);
+            const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+            document.getElementById('masterTrimLabel').textContent = `${avg}%`;
+            document.getElementById('masterTrimSlider').value = avg;
+            renderAll();
+        }
+
+        function applySavingsPreset(preset) {
+            let target = 0;
+            if (preset === 'mindful') target = 15;
+            else if (preset === 'fire') target = 35;
+
+            document.getElementById('masterTrimSlider').value = target;
+            handleMasterTrimChange(target);
+            showToast(`Applied ${target}% flexible spending trim preset`);
+        }
+
+        function handleApyChange(val) {
+            state.apy = parseFloat(val);
+            let desc = 'High-Yield Savings';
+            if (state.apy >= 10) desc = 'Aggressive Growth';
+            else if (state.apy >= 6.5) desc = 'Index Fund Avg';
+            document.getElementById('apyValueLabel').textContent = `${state.apy.toFixed(1)}% (${desc})`;
+            renderAll();
+        }
+
+        function setHorizon(years) {
+            state.horizonYears = years;
+            [1, 5, 10].forEach(y => {
+                const btn = document.getElementById(`hz-${y}`);
+                if (y === years) {
+                    btn.className = 'px-2.5 py-1 rounded-md text-xs font-bold bg-sky-500 text-white transition';
+                } else {
+                    btn.className = 'px-2.5 py-1 rounded-md text-xs font-bold text-slate-400 hover:text-white transition';
+                }
+            });
+            document.querySelectorAll('.hz-label').forEach(el => el.textContent = years);
+            renderAll();
+        }
+
+        function renderWealthProjectionChart(fin) {
+            const svg = document.getElementById('wealthChartSvg');
+            svg.innerHTML = '';
+
+            const months = state.horizonYears * 12;
+            const monthlyRate = (state.apy / 100) / 12;
+
+            const basePoints = [];
+            const optPoints = [];
+
+            let baseBalance = 0;
+            let optBalance = 0;
+
+            for (let m = 0; m <= months; m++) {
+                basePoints.push(baseBalance);
+                optPoints.push(optBalance);
+                baseBalance = (baseBalance + fin.baselineMonthlySavings) * (1 + monthlyRate);
+                optBalance = (optBalance + fin.optimizedMonthlySavings) * (1 + monthlyRate);
+            }
+
+            const finalBase = basePoints[basePoints.length - 1];
+            const finalOpt = optPoints[optPoints.length - 1];
+            const netGain = finalOpt - finalBase;
+
+            document.getElementById('projBaselineTotal').textContent = fmtMoney(finalBase);
+            document.getElementById('projOptimizedTotal').textContent = fmtMoney(finalOpt);
+            document.getElementById('projNetGain').textContent = `+${fmtMoney(netGain)}`;
+            document.getElementById('projMonthlyDelta').textContent = `+${fmtMoney(fin.totalMonthlyBoost)}/mo extra saved`;
+
+            // SVG Dimensions & Padding
+            const w = 600;
+            const h = 240;
+            const padL = 58;
+            const padR = 20;
+            const padT = 18;
+            const padB = 30;
+            const plotW = w - padL - padR;
+            const plotH = h - padT - padB;
+
+            const maxVal = Math.max(finalOpt, finalBase, 1000) * 1.08;
+
+            function getX(stepIdx) {
+                return padL + (stepIdx / months) * plotW;
+            }
+            function getY(val) {
+                return padT + plotH - (val / maxVal) * plotH;
+            }
+
+            // Horizontal Grid Lines & Y-Axis Labels
+            for (let i = 0; i <= 4; i++) {
+                const val = (maxVal / 4) * i;
+                const y = getY(val);
+
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', padL);
+                line.setAttribute('y1', y);
+                line.setAttribute('x2', w - padR);
+                line.setAttribute('y2', y);
+                line.setAttribute('stroke', '#1e293b');
+                line.setAttribute('stroke-dasharray', '4,4');
+                svg.appendChild(line);
+
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', padL - 8);
+                label.setAttribute('y', y + 4);
+                label.setAttribute('text-anchor', 'end');
+                label.setAttribute('fill', '#64748b');
+                label.setAttribute('font-size', '10');
+                const shortVal = (val * CURRENCIES[currentCurrency].rate);
+                label.textContent = shortVal >= 1000 ? `${CURRENCIES[currentCurrency].symbol}${(shortVal / 1000).toFixed(0)}k` : fmtMoney(val);
+                svg.appendChild(label);
+            }
+
+            // Build SVG Path Strings
+            const optCoords = optPoints.map((v, i) => `${getX(i)},${getY(v)}`).join(' L ');
+            const baseCoords = basePoints.map((v, i) => `${getX(i)},${getY(v)}`).join(' L ');
+
+            // Shaded Area Under Optimized Line
+            const areaPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            areaPath.setAttribute('d', `M ${getX(0)},${getY(0)} L ${optCoords} L ${getX(months)},${getY(0)} Z`);
+            areaPath.setAttribute('fill', 'rgba(16, 185, 129, 0.16)');
+            svg.appendChild(areaPath);
+
+            // Baseline Trajectory Line
+            const baseLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            baseLine.setAttribute('d', `M ${baseCoords}`);
+            baseLine.setAttribute('fill', 'none');
+            baseLine.setAttribute('stroke', '#64748b');
+            baseLine.setAttribute('stroke-width', '2.5');
+            baseLine.setAttribute('stroke-dasharray', '5,4');
+            svg.appendChild(baseLine);
+
+            // Optimized Trajectory Line
+            const optLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            optLine.setAttribute('d', `M ${optCoords}`);
+            optLine.setAttribute('fill', 'none');
+            optLine.setAttribute('stroke', '#10b981');
+            optLine.setAttribute('stroke-width', '3.5');
+            svg.appendChild(optLine);
+
+            // End Dots
+            const endOptCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            endOptCircle.setAttribute('cx', getX(months));
+            endOptCircle.setAttribute('cy', getY(finalOpt));
+            endOptCircle.setAttribute('r', '5');
+            endOptCircle.setAttribute('fill', '#10b981');
+            svg.appendChild(endOptCircle);
+
+            // X-Axis Year Labels
+            const steps = state.horizonYears === 1 ? 4 : state.horizonYears;
+            for (let s = 0; s <= steps; s++) {
+                const mIdx = Math.round((s / steps) * months);
+                const x = getX(mIdx);
+                const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                txt.setAttribute('x', x);
+                txt.setAttribute('y', h - 8);
+                txt.setAttribute('text-anchor', 'middle');
+                txt.setAttribute('fill', '#64748b');
+                txt.setAttribute('font-size', '10');
+                txt.textContent = state.horizonYears === 1 ? `Mo ${mIdx}` : `Yr ${s}`;
+                svg.appendChild(txt);
+            }
+        }
+
+        // ============================================================================
+        // 9. INTERACTIVE TRANSACTION LEDGER
+        // ============================================================================
+        function renderFilterPills() {
+            const container = document.getElementById('ledgerFilterPills');
+            container.innerHTML = '';
+
+            const allCats = ['ALL', ...Object.keys(CATEGORIES)];
+            allCats.forEach(cat => {
+                const isActive = state.activeCategoryFilter === cat;
+                const btn = document.createElement('button');
+                btn.onclick = () => selectCategoryFilter(cat);
+                btn.className = `px-3 py-1 rounded-full text-xs font-semibold transition shrink-0 ${
+                    isActive
+                        ? 'bg-emerald-600 text-white shadow'
+                        : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                }`;
+                btn.textContent = cat === 'ALL' ? 'All Categories' : cat;
+                container.appendChild(btn);
+            });
+        }
+
+        function renderTransactions() {
+            const tbody = document.getElementById('txTableBody');
+            const query = document.getElementById('txSearchInput').value.trim().toLowerCase();
+            const sortMode = document.getElementById('txSortSelect').value;
+
+            let list = state.transactions.filter(t => !state.resolvedDuplicateIds.has(t.id));
+
+            if (state.activeCategoryFilter !== 'ALL') {
+                list = list.filter(t => t.category === state.activeCategoryFilter);
+            }
+
+            if (query) {
+                list = list.filter(t =>
+                    t.merchant.toLowerCase().includes(query) ||
+                    t.note.toLowerCase().includes(query) ||
+                    t.category.toLowerCase().includes(query)
+                );
+            }
+
+            // Sort
+            list.sort((a, b) => {
+                if (sortMode === 'date-desc') return b.date.localeCompare(a.date);
+                if (sortMode === 'amount-desc') return b.amount - a.amount;
+                if (sortMode === 'amount-asc') return a.amount - b.amount;
+                if (sortMode === 'merchant-asc') return a.merchant.localeCompare(b.merchant);
+                return 0;
+            });
+
+            tbody.innerHTML = '';
+
+            if (list.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-slate-500 text-xs">
+                            No sample transactions match your current filter.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            list.forEach(tx => {
+                const catColor = CATEGORIES[tx.category]?.color || '#94a3b8';
+                const isFlagged = tx.isDuplicate && !state.ignoredDuplicateIds.has(tx.id);
+
+                const tr = document.createElement('tr');
+                tr.className = `hover:bg-slate-800/40 transition ${isFlagged ? 'bg-amber-500/5' : ''}`;
+                tr.innerHTML = `
+                    <td class="py-3 px-5 font-mono text-xs text-slate-400 whitespace-nowrap">${tx.date}</td>
+                    <td class="py-3 px-4">
+                        <div class="font-bold text-slate-100">${tx.merchant}</div>
+                        <div class="text-[11px] text-slate-400">${tx.note}</div>
+                    </td>
+                    <td class="py-3 px-4 whitespace-nowrap">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-200 border border-slate-700">
+                            <span class="w-2 h-2 rounded-full" style="background:${catColor}"></span>
+                            ${tx.category}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 whitespace-nowrap">
+                        ${isFlagged
+                            ? `<span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                <i data-lucide="alert-circle" class="w-3 h-3"></i> Duplicate Check
+                               </span>`
+                            : `<span class="text-[11px] text-slate-400">Verified</span>`
+                        }
+                    </td>
+                    <td class="py-3 px-4 text-right font-display font-bold text-white whitespace-nowrap">
+                        ${fmtMoney(tx.amount)}
+                    </td>
+                    <td class="py-3 px-5 text-right whitespace-nowrap">
+                        <button onclick="deleteTransaction('${tx.id}')" title="Delete transaction" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            lucide.createIcons();
+        }
+
+        function deleteTransaction(txId) {
+            const target = state.transactions.find(t => t.id === txId);
+            state.transactions = state.transactions.filter(t => t.id !== txId);
+            renderAll();
+            if (target) {
+                showToast(`Removed ${target.merchant} (${fmtMoney(target.amount)})`);
+            }
+        }
+
+        // ============================================================================
+        // 10. ADD TRANSACTION MODAL & LIGHT/DARK THEME
+        // ============================================================================
+        function openAddModal() {
+            document.getElementById('addTxModal').classList.remove('hidden');
+            document.getElementById('modalMerchant').focus();
+        }
+
+        function closeAddModal() {
+            document.getElementById('addTxModal').classList.add('hidden');
+        }
+
+        function submitNewTransaction() {
+            const merchant = document.getElementById('modalMerchant').value.trim() || 'Custom Sample Expense';
+            const amount = Math.max(1, Number(document.getElementById('modalAmount').value) || 25);
+            const category = document.getElementById('modalCategory').value;
+            const isDup = document.getElementById('modalFlagDuplicate').checked;
+
+            const newTx = {
+                id: 'custom_' + Date.now(),
+                date: '2025-05-28',
+                merchant,
+                note: isDup ? 'User-flagged duplicate test charge' : 'Custom added sample transaction',
+                category,
+                amount,
+                isDuplicate: isDup,
+                dupReason: isDup ? 'Flagged manually for duplicate check' : undefined
+            };
+
+            state.transactions.unshift(newTx);
+            document.getElementById('modalMerchant').value = '';
+            document.getElementById('modalFlagDuplicate').checked = false;
+            closeAddModal();
+            renderAll();
+            showToast(`Added ${merchant} (${fmtMoney(amount)})`);
+        }
+
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            const body = document.body;
+            const header = document.getElementById('mainHeader');
+            const deskIcon = document.getElementById('desktopThemeIcon');
+            const mobIcon = document.getElementById('mobileThemeIcon');
+
+            if (isDarkMode) {
+                body.className = 'bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-emerald-500 selection:text-white';
+                header.className = 'sticky top-0 z-30 bg-slate-900/85 backdrop-blur-md border-b border-slate-800 transition-colors';
+                deskIcon.setAttribute('data-lucide', 'sun');
+                mobIcon.setAttribute('data-lucide', 'sun');
+            } else {
+                body.className = 'bg-slate-100 text-slate-900 min-h-screen flex flex-col selection:bg-emerald-500 selection:text-white';
+                header.className = 'sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 transition-colors shadow-sm';
+                deskIcon.setAttribute('data-lucide', 'moon');
+                mobIcon.setAttribute('data-lucide', 'moon');
+            }
+            lucide.createIcons();
+            showToast(isDarkMode ? 'Dark Fintech Theme enabled' : 'High-Contrast Light Theme enabled');
+        }
+
+        // Master Render Coordinator
+        function renderAll() {
+            const fin = computeFinancials();
+            renderKPIs(fin);
+            renderSpendingByCategory(fin);
+            renderDuplicatesPanel(fin);
+            renderCategorySliders(fin);
+            renderWealthProjectionChart(fin);
+            renderFilterPills();
+            renderTransactions();
+            lucide.createIcons();
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadProfile('professional');
+        });
+    </script>
+</body>
+</html>
