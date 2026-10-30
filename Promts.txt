@@ -1,0 +1,8 @@
+Promt for DecideWise: 
+please make a decision helper using visualization with all working button and using html it should be interactive
+
+Promt for SOLARIS 3D: 
+please make an interactive 3d solar syatem model using visualization with all working button and using html it should be interactive
+
+Promt for FinPulse:
+please make an interactive money explorer using visualization with all working button and using html it should be interractive
